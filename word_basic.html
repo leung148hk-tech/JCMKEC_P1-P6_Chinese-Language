@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>字詞基礎 - 趣味多感官訓練</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
@@ -50,8 +51,14 @@
         .filter-btn { transition: all 0.2s; }
         .filter-active { background-color: #34d399; color: white; border-color: #059669; font-weight: bold; }
 
-        .lvl-btn { transition: transform 0.2s; }
-        .lvl-btn:hover { transform: scale(1.05); }
+        .lvl-btn { transition: transform 0.2s, box-shadow 0.2s; }
+        @media (hover: hover) {
+            .lvl-btn:hover { transform: scale(1.05); }
+        }
+        button:focus-visible, a:focus-visible, input:focus-visible {
+            outline: 3px solid #f59e0b;
+            outline-offset: 3px;
+        }
         .lvl-correct { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
         .lvl-wrong { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
         .lvl-unplayed { background-color: white; border-color: #cbd5e1; color: #475569; }
@@ -64,6 +71,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -99,9 +109,15 @@
         
         <!-- 模式 1：闖關地圖與挑戰 -->
         <div id="quest-mode" class="w-full max-w-5xl mx-auto flex flex-col gap-4 lg:gap-6">
-            <div id="quest-directory" class="w-full bg-white rounded-3xl p-6 shadow-xl border border-slate-200">
-                <h2 class="text-2xl font-black text-slate-800 mb-2 flex items-center gap-2">🗺️ 學習地圖</h2>
-                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 text-sm md:text-base font-bold text-slate-700">
+            <div id="quest-directory" class="w-full bg-white rounded-3xl p-5 md:p-6 shadow-xl border border-slate-200">
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">🗺️ 學習地圖</h2>
+                        <p class="text-slate-500 font-bold text-sm mt-1">每一章完成 30 題；按題號可從任何題目開始。</p>
+                    </div>
+                    <span class="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-full">共 300 題</span>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 flex flex-col md:flex-row gap-4 text-sm md:text-base font-bold text-slate-700">
                     <div class="text-emerald-800 md:w-32 flex-shrink-0 flex items-center">💡 標記說明：</div>
                     <div class="flex flex-wrap gap-4 flex-1">
                         <div class="flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-emerald-100 border-2 border-emerald-400 flex items-center justify-center text-lg shadow-sm">✅</span> 已過關</div>
@@ -109,7 +125,11 @@
                         <div class="flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-white border-2 border-slate-300 flex items-center justify-center text-lg shadow-sm text-slate-400">#</span> 尚未挑戰</div>
                     </div>
                 </div>
-                <div id="directory-content" class="flex flex-col gap-8">
+                <div class="sticky top-2 z-10 mb-5 bg-white/95 backdrop-blur border-2 border-emerald-200 rounded-2xl p-3 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p id="quick-next-label" role="status" class="text-sm md:text-base font-black text-slate-700">正在整理你的學習進度…</p>
+                    <button id="continue-learning-btn" type="button" onclick="continueLearning()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-3 rounded-xl shadow border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition">▶️ 繼續未完成題目</button>
+                </div>
+                <div id="directory-content" class="flex flex-col gap-4">
                     <!-- 目錄動態生成 -->
                 </div>
             </div>
@@ -128,7 +148,8 @@
                     <div class="bg-white rounded-xl shadow-sm border border-emerald-200 p-3 flex flex-col gap-2 relative">
                         <h3 class="font-bold text-emerald-800 text-sm">🔍 想寫小學習字表上的字？</h3>
                         <div class="flex gap-2">
-                            <input type="text" id="custom-char-input" maxlength="1" placeholder="輸入任何一個中文字..." class="flex-1 px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-lg text-center font-bold">
+                            <label for="custom-char-input" class="sr-only">輸入一個想練習的中文字</label>
+                            <input type="text" id="custom-char-input" maxlength="1" inputmode="text" placeholder="輸入任何一個中文字..." class="flex-1 px-3 py-2 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-lg text-center font-bold">
                             <button onclick="searchCustomChar()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-600 shadow-sm transition">生成</button>
                         </div>
                     </div>
@@ -176,11 +197,11 @@
     </div>
 
     <!-- 學習小教學 Modal -->
-    <div id="tutorial-modal" class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 pointer-events-none">
+    <div id="tutorial-modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 pointer-events-none">
         <div class="bg-white rounded-3xl p-6 md:p-8 shadow-2xl w-[95%] max-w-2xl transform scale-90 transition-transform flex flex-col max-h-[90vh] pointer-events-auto" id="tutorial-content">
             <div class="flex justify-between items-center mb-4 border-b-2 border-emerald-100 pb-3">
                 <h2 id="tutorial-title" class="text-2xl md:text-3xl font-black text-emerald-600 flex items-center gap-2">📘 學習錦囊</h2>
-                <button onclick="closeTutorial()" class="text-slate-400 hover:text-rose-500 text-4xl font-bold transition leading-none">&times;</button>
+                <button type="button" onclick="closeTutorial()" aria-label="關閉學習錦囊" class="text-slate-400 hover:text-rose-500 text-4xl font-bold transition leading-none">&times;</button>
             </div>
             <div id="tutorial-body" class="flex-1 overflow-y-auto pr-2 text-slate-700 text-lg md:text-xl leading-relaxed space-y-4">
                 <!-- 教學內容動態載入 -->
@@ -208,7 +229,7 @@
 
     <script>
         // ================= 1. 核心系統設定與過濾語音 =================
-        let totalExp = parseInt(localStorage.getItem('userExp')) || 0;
+        let totalExp = parseInt(window.__jcmkecSessionStore.getItem('userExp')) || 0;
         document.getElementById('exp-display').innerText = totalExp;
         let currentQuestionIdx = -1;
         let questWriter;
@@ -226,14 +247,15 @@
                        .replace(/[\uFE0F]/g, '');                     // 移除變體選擇符
         }
 
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-                msg.lang = 'zh-HK';
-                msg.rate = 0.85; 
-                window.speechSynthesis.speak(msg);
+        function speakText(text, rate = 0.9) {
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         function showToast(message) {
@@ -277,7 +299,8 @@
                     <p class="text-lg"><span class="bg-white font-black text-blue-600 border border-blue-200 px-2 py-1 rounded">氵 (水字旁)</span> 👉 跟<span class="font-bold text-blue-600">水</span>有關：海、河、流汗</p>
                     <p class="text-lg"><span class="bg-white font-black text-amber-600 border border-amber-200 px-2 py-1 rounded">扌 (手字旁)</span> 👉 跟<span class="font-bold text-amber-600">手部動作</span>有關：打、拍、推</p>
                     <p class="text-lg"><span class="bg-white font-black text-green-600 border border-green-200 px-2 py-1 rounded">艹 (草字頭)</span> 👉 跟<span class="font-bold text-green-600">植物</span>有關：花、草、葉</p>
-                    <p class="text-lg"><span class="bg-white font-black text-rose-600 border border-rose-200 px-2 py-1 rounded">犭 (犬字旁)</span> 👉 跟<span class="font-bold text-rose-600">動物</span>有關：狗、貓、獅子</p>
+                    <p class="text-lg"><span class="bg-white font-black text-rose-600 border border-rose-200 px-2 py-1 rounded">犭 (犬字旁)</span> 👉 跟<span class="font-bold text-rose-600">動物</span>有關：狗、獅子</p>
+                    <p class="text-lg"><span class="bg-white font-black text-rose-600 border border-rose-200 px-2 py-1 rounded">豸 (豸字旁)</span> 👉 跟<span class="font-bold text-rose-600">獸類</span>有關：貓</p>
                 </div>
                 <p class="text-sm text-slate-500 text-center mt-2">💡 秘訣：不會讀的字，先看看它的部首猜意思！</p>
             `,
@@ -335,7 +358,7 @@
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
             
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -372,23 +395,23 @@
             ['哪一個部首加上「木🌳」，會變成休息的「休🛌」？', '❓ + 木 = 休', '亻 (人) 🚶', '氵 (水) 💧', 0, '人字部代表與人有關。', '休'],
             ['「木🌳」加上「木🌳」，會變成什麼字？', '木 + 木 = ❓', '林 🌲', '森 🌲🌲', 0, '兩個木是樹林。', '林'],
             ['三個「木🌳」加在一起，會變成什麼字？', '木 + 木 + 木 = ❓', '森 🌲🌲', '林 🌲', 0, '三個木代表非常茂密的「森」林。', '森'],
-            ['哪一個部首加上「交」，會變成學校的「校🏫」？', '❓ + 交 = 校', '木 🪵', '手 ✋', 0, '學校以前多是用木頭建的。', '校'],
-            ['哪一個部首加上「寸」，會變成樹木的「樹🌲」？', '❓ + 寸 = 樹', '木 🪵', '水 💧', 0, '樹木當然是木字部！', '樹'],
+            ['哪一個部首加上「交」，會變成學校的「校🏫」？', '❓ + 交 = 校', '木 🪵', '手 ✋', 0, '「校」字的部首是木字旁。', '校'],
+            ['觀察「樹🌲」字，它的部首是什麼？', '樹的部首 = ❓', '木 🪵', '寸 ✋', 0, '「樹」字的部首是木字旁。', '樹'],
             ['「木🌳」加上「奇」，會變成什麼字？', '木 + 奇 = ❓', '椅 🪑', '桌 🪑', 0, '椅子是用木頭做的。', '椅'],
-            ['「木🌳」加上「喬」，會變成什麼字？', '木 + 喬 = ❓', '橋 🌉', '校 🏫', 0, '橋是用木頭建的。', '橋'],
-            ['「氵💧」加上「工」，會變成什麼字？', '氵 + 工 = ❓', '江 🌊', '河 🌊', 0, '水加工就是長「江」。', '江'],
+            ['「木🌳」加上「喬」，會變成什麼字？', '木 + 喬 = ❓', '橋 🌉', '校 🏫', 0, '「橋」字的部首是木字旁。', '橋'],
+            ['「氵💧」加上「工」，會變成什麼字？', '氵 + 工 = ❓', '江 🌊', '河 🌊', 0, '「江」字左邊是三點水。', '江'],
             ['「氵💧」加上「可」，會變成什麼字？', '氵 + 可 = ❓', '河 🌊', '海 🌊', 0, '水加可就是「河」流。', '河'],
             ['「氵💧」加上「每」，會變成什麼字？', '氵 + 每 = ❓', '海 🌊', '洋 🌊', 0, '水加每就是大「海」。', '海'],
             ['哪一個部首加上「干」，會變成流汗的「汗💦」？', '❓ + 干 = 汗', '氵 (水) 💧', '火 🔥', 0, '流汗會流水出來。', '汗'],
             ['哪一個部首加上「十」，會變成汁液的「汁🧃」？', '❓ + 十 = 汁', '氵 (水) 💧', '木 🪵', 0, '果汁都是有水份的。', '汁'],
             ['「火🔥」加上「火🔥」，會變成什麼字？', '火 + 火 = ❓', '炎 🥵', '熱 🥵', 0, '兩個火疊在一起，代表非常「炎」熱。', '炎'],
-            ['「火🔥」(灬) 加上「然」，會變成什麼字？', '灬 + 然 = ❓', '熱 🥵', '冷 🥶', 0, '底下的四點(灬)代表火，所以很熱。', '熱'],
-            ['哪一個部首加上「者」，會變成煮飯的「煮🍳」？', '❓ + 者 = 煮', '灬 (火) 🔥', '氵 (水) 💧', 0, '煮東西需要用火。', '煮'],
+            ['「火🔥」加上「然」，會變成什麼字？', '火 + 然 = ❓', '燃 🔥', '冷 🥶', 0, '火字旁加上「然」是「燃」，燃燒需要火。', '燃'],
+            ['哪一個部首加上「者」，會變成煮飯的「煮🍳」？', '❓ + 者 = 煮', '灬 (火) 🔥', '氵 (水) 💧', 0, '「煮」字下面是四點底，與火有關。', '煮'],
             ['「艸🌿」加上「早」，會變成什麼字？', '艹 + 早 = ❓', '草 🌱', '花 🌸', 0, '草字頭代表植物。', '草'],
             ['「艸🌿」加上「化」，會變成什麼字？', '艹 + 化 = ❓', '花 🌸', '草 🌱', 0, '花也是植物。', '花'],
             ['哪一個部首加上「世」，會變成樹葉的「葉🍂」？', '❓ + 世 + 木 = 葉', '艹 (草) 🌿', '竹 🎋', 0, '樹葉也是植物的一部分。', '葉'],
             ['「艸🌿」加上「牙」，會變成什麼字？', '艹 + 牙 = ❓', '芽 🌱', '花 🌸', 0, '發芽是植物生長。', '芽'],
-            ['「艸🌿」加上「苗」，會變成什麼字？', '艹 + 苗 = ❓', '貓 🐱', '苗 🌱', 1, '小草長出來是苗。', '苗'],
+            ['「艸🌿」加上「田」，會變成什麼字？', '艹 + 田 = ❓', '貓 🐱', '苗 🌱', 1, '草字頭加上「田」就是「苗」。', '苗'],
             ['「木🌳」加上「支」，會變成什麼字？', '木 + 支 = ❓', '枝 🌿', '根 🪵', 0, '樹枝的枝。', '枝'],
             ['「木🌳」加上「艮」，會變成什麼字？', '木 + 艮 = ❓', '根 🪵', '枝 🌿', 0, '樹根的根。', '根'],
             ['「木🌳」加上「兆」，會變成什麼字？', '木 + 兆 = ❓', '桃 🍑', '梅 🌸', 0, '水蜜桃的桃。', '桃'],
@@ -441,7 +464,7 @@
             ['「广🏠」加上「木」，會變成什麼字？', '广 + 木 = ❓', '床 🛏️', '店 🏪', 0, '以前的床是木頭放在屋子裡。', '床'],
             ['哪一個部首加上「占」，會變成商店的「店🏪」？', '❓ + 占 = 店', '广 (屋頂🏠)', '宀 (屋頂🏠)', 0, '店舖通常有一個大屋頂。', '店'],
             ['「广🏠」加上「坐」，會變成什麼字？', '广 + 坐 = ❓', '座 💺', '坐 🚶', 0, '座位是一個有屋頂的地方。', '座'],
-            ['「辶🚶」加上「云」，會變成什麼字？', '辶 + 云 = ❓', '運 🚚', '近 📏', 0, '運動、運送都需要走動。', '運'],
+            ['「辶🚶」加上「軍」，會變成什麼字？', '辶 + 軍 = ❓', '運 🚚', '近 📏', 0, '「運」字的內部是「軍」，運動、運送都和走動有關。', '運'],
             ['「辶🚶」加上「斤」，會變成什麼字？', '辶 + 斤 = ❓', '近 📏', '遠 🔭', 0, '走得很近。', '近'],
             ['哪一個部首加上「袁」，會變成遙遠的「遠🔭」？', '❓ + 袁 = 遠', '辶 (走🚶)', '木 🪵', 0, '遠方需要走很遠的路。', '遠'],
             ['「辶🚶」加上「告」，會變成什麼字？', '辶 + 告 = ❓', '造 🏗️', '運 🚚', 0, '製造的造。', '造'],
@@ -469,8 +492,8 @@
 
         const cAnimalPool = [
             ['哪一個部首加上「句」，會變成小狗的「狗🐶」？', '❓ + 句 = 狗', '犭(犬) 🐕', '虫 🐛', 0, '小狗是動物，用犬(犭)字部。', '狗'],
-            ['「犭🐕」加上「苗」，會變成什麼字？', '犭 + 苗 = ❓', '貓 🐱', '豬 🐷', 0, '貓咪是動物。', '貓'],
-            ['「犭🐕」加上「者」，會變成什麼字？', '犭 + 者 = ❓', '豬 🐷', '狗 🐶', 0, '小豬是動物。', '豬'],
+            ['「豸🐾」加上「苗」，會變成什麼字？', '豸 + 苗 = ❓', '貓 🐱', '豬 🐷', 0, '「貓」字的部首是豸，豸部與獸類有關。', '貓'],
+            ['「豕🐖」加上「者」，會變成什麼字？', '豕 + 者 = ❓', '豬 🐷', '狗 🐶', 0, '「豬」字的部首是豕，豕部與豬有關。', '豬'],
             ['哪一個部首加上「文」，會變成蚊子的「蚊🦟」？', '❓ + 文 = 蚊', '虫 🐛', '鳥 🐦', 0, '蚊子是昆蟲，用虫字部。', '蚊'],
             ['「虫🐛」加上「義」，會變成什麼字？', '虫 + 義 = ❓', '蟻 🐜', '蚊 🦟', 0, '螞蟻是昆蟲。', '蟻'],
             ['「虫🐛」加上「它」，會變成什麼字？', '虫 + 它 = ❓', '蛇 🐍', '蛙 🐸', 0, '蛇在古代被歸類為虫部。', '蛇'],
@@ -538,7 +561,7 @@
             ['祝你永遠___福❤️。', '幸 (幸福)', '辛 (辛苦)', 0, '幸福是幸。', '幸'],
             ['我喜歡吃___蜜🍯。', '蜂 (蜜蜂🐝)', '峰 (山峰⛰️)', 0, '蜜蜂是昆蟲(虫部)。', '蜂'],
             ['那是一座高高的山___⛰️。', '峰 (山峰⛰️)', '蜂 (蜜蜂🐝)', 0, '山峰是山字部。', '峰'],
-            ['媽媽買了一個水___🍑。', '蜜 (甜蜜🍯)', '密 (秘密🤫)', 0, '水蜜桃很甜，跟蜂蜜(虫部)有關。', '蜜'],
+            ['媽媽買了一個水___🍑。', '蜜 (甜蜜🍯)', '密 (秘密🤫)', 0, '水蜜桃的「蜜」字下面是虫字旁。', '蜜'],
             ['這是一個大秘___🤫。', '密 (秘密🤫)', '蜜 (甜蜜🍯)', 0, '秘密要藏在屋頂下(宀部)。', '密'],
             ['這是一個圓___的蘋果🍎。', '形 (形狀)', '刑 (處罰)', 0, '形狀的形，右邊是三撇。', '形'],
             ['請你幫我___水🚿。', '澆 (澆水)', '燒 (燒火)', 0, '澆水用水部。', '澆'],
@@ -546,9 +569,9 @@
             ['海邊有一隻小貝___🐚。', '殼 (外殼)', '穀 (穀物)', 0, '貝殼的殼，上面沒有禾。', '殼'],
             ['這是一把___利的刀🔪。', '鋒 (鋒利)', '峰 (山峰)', 0, '鋒利用金屬(金字旁)。', '鋒'],
             ['這件衣服是___色的🔵。', '藍 (顏色)', '籃 (籃子)', 0, '藍色有草字頭。', '藍'],
-            ['我們去打___球🏀。', '籃 (籃子)', '藍 (顏色)', 0, '籃球框是用竹子做的(竹字頭)。', '籃'],
-            ['公園裡有美麗的花___⛲。', '園 (公園)', '圓 (圓形)', 0, '公園裡面有衣服(袁)。', '園'],
-            ['這是一個___形的球⚽。', '圓 (圓形)', '園 (公園)', 0, '圓形裡面有員工的員。', '圓'],
+            ['我們去打___球🏀。', '籃 (籃子)', '藍 (顏色)', 0, '「籃」字上面是竹字頭。', '籃'],
+            ['公園裡有美麗的花___⛲。', '園 (公園)', '圓 (圓形)', 0, '「園」字外面是囗，裡面是「袁」。', '園'],
+            ['這是一個___形的球⚽。', '圓 (圓形)', '園 (公園)', 0, '「圓」字外面是囗，裡面是「員」。', '圓'],
             ['妹妹在___覺😴。', '睡 (睡覺)', '垂 (垂下)', 0, '睡覺要閉上眼睛(目部)。', '睡'],
             ['樹葉低___下來🍃。', '垂 (垂下)', '睡 (睡覺)', 0, '垂下沒有目。', '垂'],
             ['桌上有一個果___🍎。', '盤 (盤子)', '盆 (盆子)', 0, '果盤的盤。', '盤'],
@@ -579,7 +602,7 @@
             ['林', '木 🌳', '八', 0, '樹林有很多木。'],
             ['海', '水(氵) 🌊', '每', 0, '海裡全是水。'],
             ['樹', '木 🌳', '寸', 0, '樹是木頭。'],
-            ['校', '木 🪵', '交', 0, '學校以前多用木建的。'],
+            ['校', '木 🪵', '交', 0, '「校」字的部首是木字旁。'],
             ['跑', '足 🦶', '包', 0, '跑步用腳(足)。'],
             ['媽', '女 👩', '馬 🐴', 0, '媽媽是女性。'],
             ['筆', '竹 🎋', '毛 🪶', 0, '以前的筆是用竹子做的。'],
@@ -649,36 +672,112 @@
             ...tw1Pool, ...tw2Pool, ...s1Pool, ...s2Pool, ...w1Pool, ...w2Pool
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('questProgress')) || new Array(rawQuestData.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('questProgress')) || new Array(rawQuestData.length).fill(0);
         let isSandboxInitialized = false;
+        let chapterOpenState = JSON.parse(window.__jcmkecSessionStore.getItem('wordBasicChapterOpenState') || '{}');
+
+        function getResumeQuestionIdx() {
+            const lastQuestionIdx = Number(window.__jcmkecSessionStore.getItem('wordBasicLastQuestionIdx'));
+            if (Number.isInteger(lastQuestionIdx) && lastQuestionIdx >= 0 && lastQuestionIdx < rawQuestData.length && userProgress[lastQuestionIdx] !== 1) {
+                return lastQuestionIdx;
+            }
+            const unfinishedIdx = userProgress.findIndex(status => status !== 1);
+            return unfinishedIdx;
+        }
+
+        function getCategoryForQuestion(idx) {
+            return idx >= 0 && rawQuestData[idx] ? rawQuestData[idx][1] : null;
+        }
+
+        function isChapterOpen(catId) {
+            if (typeof chapterOpenState[catId] === 'boolean') return chapterOpenState[catId];
+            const resumeCatId = getCategoryForQuestion(getResumeQuestionIdx());
+            return catId === resumeCatId;
+        }
+
+        function saveChapterState() {
+            window.__jcmkecSessionStore.setItem('wordBasicChapterOpenState', JSON.stringify(chapterOpenState));
+        }
+
+        function toggleChapter(catId) {
+            chapterOpenState[catId] = !isChapterOpen(catId);
+            saveChapterState();
+            renderDirectory();
+            requestAnimationFrame(() => document.getElementById(`chapter-${catId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        }
+
+        function continueLearning() {
+            const targetIdx = getResumeQuestionIdx();
+            if (targetIdx === -1) {
+                showToast('太棒了！300 題已全部完成。');
+                return;
+            }
+            const targetCatId = getCategoryForQuestion(targetIdx);
+            if (targetCatId) {
+                chapterOpenState[targetCatId] = true;
+                saveChapterState();
+            }
+            startQuestion(targetIdx);
+        }
+
+        function updateQuickNavigation() {
+            const label = document.getElementById('quick-next-label');
+            const button = document.getElementById('continue-learning-btn');
+            if (!label || !button) return;
+            const solved = userProgress.filter(status => status === 1).length;
+            const targetIdx = getResumeQuestionIdx();
+            if (targetIdx === -1) {
+                label.textContent = `🎉 已完成 ${solved} / ${rawQuestData.length} 題，全部過關！`;
+                button.textContent = '🏆 已完成全部題目';
+                button.disabled = true;
+                button.className = 'w-full sm:w-auto bg-slate-200 text-slate-500 font-black px-5 py-3 rounded-xl cursor-not-allowed';
+                return;
+            }
+            const statusText = userProgress[targetIdx] === -1 ? '上次未完成' : '下一個未挑戰';
+            label.textContent = `目前完成 ${solved} / ${rawQuestData.length} 題 · ${statusText}：第 ${targetIdx + 1} 題`;
+            button.textContent = `▶️ 繼續第 ${targetIdx + 1} 題`;
+            button.disabled = false;
+            button.className = 'w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-3 rounded-xl shadow border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition';
+        }
 
         function renderDirectory() {
             const dirContainer = document.getElementById('directory-content');
             let html = '';
             categories.forEach(cat => {
+                const categoryQuestions = rawQuestData
+                    .map((q, idx) => ({ q, idx }))
+                    .filter(item => item.q[1] === cat.id);
+                const completedCount = categoryQuestions.filter(item => userProgress[item.idx] === 1).length;
+                const chapterIsOpen = isChapterOpen(cat.id);
                 html += `
-                    <div class="mb-4">
-                        <div class="flex items-center justify-between border-b-2 border-${cat.color}-100 pb-2 mb-3">
-                            <h3 class="text-xl font-bold text-${cat.color}-700">${cat.title}</h3>
-                            <button onclick="showTutorial('${cat.id}')" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-sm md:text-base font-bold shadow-sm border border-emerald-300 hover:bg-emerald-200 transition flex items-center gap-1 active:scale-95">📘 學習錦囊</button>
+                    <section id="chapter-${cat.id}" class="scroll-mt-3 bg-slate-50/70 border border-slate-200 rounded-2xl p-4 md:p-5" aria-label="${cat.title}">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${chapterIsOpen ? 'border-b-2 border-' + cat.color + '-100 pb-3 mb-3' : ''}">
+                            <div>
+                                <h3 class="text-xl font-black text-${cat.color}-700">${cat.title}</h3>
+                                <p class="text-sm font-bold text-slate-500 mt-1">本章進度：${completedCount} / ${categoryQuestions.length} 題</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                                <button type="button" onclick="showTutorial('${cat.id}')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-sm font-bold shadow-sm border border-emerald-300 hover:bg-emerald-200 transition flex items-center justify-center gap-1 active:scale-95">📘 錦囊</button>
+                                <button type="button" onclick="toggleChapter('${cat.id}')" aria-expanded="${chapterIsOpen}" aria-controls="chapter-grid-${cat.id}" class="bg-white text-slate-700 px-3 py-2 rounded-lg text-sm font-black shadow-sm border border-slate-300 hover:bg-slate-100 transition flex items-center justify-center gap-1 active:scale-95">${chapterIsOpen ? '收合本章 ⌃' : '展開題目 ⌄'}</button>
+                            </div>
                         </div>
-                        <div class="flex flex-wrap gap-3">
+                        <div id="chapter-grid-${cat.id}" class="${chapterIsOpen ? 'grid' : 'hidden'} grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 md:gap-3">
                 `;
-                rawQuestData.forEach((q, idx) => {
-                    if(q[1] === cat.id) {
-                        let status = userProgress[idx];
-                        let btnClass = status === 1 ? 'lvl-correct' : (status === -1 ? 'lvl-wrong' : 'lvl-unplayed');
-                        let icon = status === 1 ? '✅' : (status === -1 ? '❌' : (idx + 1));
-                        html += `
-                            <button onclick="startQuestion(${idx})" class="lvl-btn ${btnClass} w-12 h-12 lg:w-14 lg:h-14 rounded-2xl font-black text-lg border-b-4 flex items-center justify-center shadow-sm">
-                                ${icon}
-                            </button>
-                        `;
-                    }
+                categoryQuestions.forEach(({ q, idx }) => {
+                    const status = userProgress[idx];
+                    const btnClass = status === 1 ? 'lvl-correct' : (status === -1 ? 'lvl-wrong' : 'lvl-unplayed');
+                    const icon = status === 1 ? '✅' : (status === -1 ? '❌' : (idx + 1));
+                    const statusText = status === 1 ? '已過關' : (status === -1 ? '尚未完成' : '尚未挑戰');
+                    html += `
+                        <button onclick="startQuestion(${idx})" aria-label="第 ${idx + 1} 題，${cat.title}，${statusText}" title="第 ${idx + 1} 題：${statusText}" class="lvl-btn ${btnClass} min-h-12 h-12 lg:h-14 rounded-2xl font-black text-lg border-b-4 flex items-center justify-center shadow-sm">
+                            ${icon}
+                        </button>
+                    `;
                 });
-                html += `</div></div>`;
+                html += `</div></section>`;
             });
             dirContainer.innerHTML = html;
+            updateQuickNavigation();
             updateTotalProgress();
         }
 
@@ -698,13 +797,14 @@
             if (catId.startsWith('s-')) tutKey = 's-stroke';
             if (catId.startsWith('w-')) tutKey = 'w-write';
 
-            if (!forceStart && !localStorage.getItem('tut_seen_' + tutKey)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + tutKey)) {
                 pendingQuestionIdx = idx;
                 showTutorial(catId);
                 return;
             }
 
             currentQuestionIdx = idx;
+            window.__jcmkecSessionStore.setItem('wordBasicLastQuestionIdx', String(idx));
             document.getElementById('quest-directory').style.display = 'none';
             
             const questPlay = document.getElementById('quest-play');
@@ -798,7 +898,13 @@
         function backToDirectory() {
             document.getElementById('quest-play').style.display = 'none';
             document.getElementById('quest-directory').style.display = 'block';
+            const currentCatId = getCategoryForQuestion(currentQuestionIdx);
+            if (currentCatId) {
+                chapterOpenState[currentCatId] = true;
+                saveChapterState();
+            }
             renderDirectory();
+            requestAnimationFrame(() => document.getElementById(`chapter-${currentCatId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         }
 
         function nextDirectoryOrQuestion() {
@@ -842,7 +948,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 speakText("不對喔，再想想看！");
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('questProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('questProgress', JSON.stringify(userProgress));
                 
                 setTimeout(() => {
                     btnElement.classList.remove('wrong', 'shake');
@@ -860,14 +966,14 @@
             
             if (userProgress[currentQuestionIdx] !== 1) {
                 totalExp += 10;
-                localStorage.setItem('userExp', totalExp);
+                window.__jcmkecSessionStore.setItem('userExp', totalExp);
                 document.getElementById('exp-display').innerText = totalExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
             }
             
             userProgress[currentQuestionIdx] = 1; 
-            localStorage.setItem('questProgress', JSON.stringify(userProgress));
+            window.__jcmkecSessionStore.setItem('questProgress', JSON.stringify(userProgress));
 
             if (qData[0] === 'c' || qData[0] === 'tw') {
                 setTimeout(() => {
@@ -1030,7 +1136,7 @@
                     speakText("寫得好！");
                     
                     totalExp += 2;
-                    localStorage.setItem('userExp', totalExp);
+                    window.__jcmkecSessionStore.setItem('userExp', totalExp);
                     document.getElementById('exp-display').innerText = totalExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -1047,5 +1153,6 @@
             });
         }
     </script>
+    <script src="voice-manager.js"></script>
 </body>
 </html>

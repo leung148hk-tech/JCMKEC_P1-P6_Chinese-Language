@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>綜合寫作專區 - 基礎寫作啟蒙</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -79,6 +80,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden bg-grid-pattern">
 
@@ -191,7 +195,7 @@
 
     <script>
         // ================= 1. 核心狀態 =================
-        let writeExp = parseInt(localStorage.getItem('writeBasicExp_v2')) || 0;
+        let writeExp = parseInt(window.__jcmkecSessionStore.getItem('writeBasicExp_v2')) || 0;
         document.getElementById('exp-display').innerText = writeExp;
         
         let currentMode = 'seq'; 
@@ -216,18 +220,14 @@
 
         // 強制選擇廣東話語音 (zh-HK)
         function speakText(text, rate = 0.9) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-                msg.lang = 'zh-HK'; 
-                msg.rate = rate; 
-                
-                let voices = window.speechSynthesis.getVoices();
-                let hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'yue-HK');
-                if (hkVoice) msg.voice = hkVoice;
-
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         function showToast(message) {
@@ -275,7 +275,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[tutKey];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -329,13 +329,13 @@
             { title: "雨中救狗", emoji: ['☁️⛈️', '👧🌂', '🐕🌧️', '🏠❤️'], trans: ['起初', '接著', '然後', '最後'], ans: ['天空突然下起了大雨。', '小美趕緊撐開雨傘。', '她看到流浪狗便幫牠遮雨。', '小美把小狗帶回家照顧。'], hint: "先下雨，才撐傘，接著看到小狗，最後帶回家。" },
             { title: "不小心的後果", emoji: ['👦🏃‍♂️', '🍌👟', '💥🤕', '😭🏥'], trans: ['剛開始', '接著', '然後', '最後'], ans: ['小明在路上開心地奔跑。', '他沒注意踩到了香蕉皮。', '他重重地摔在地上。', '他痛得大哭被送進醫院。'], hint: "先奔跑，再踩香蕉皮，然後跌倒，最後送醫院。" },
             { title: "煎蛋失敗", emoji: ['👨‍🍳🥚', '🔥🔥', '💨🔥', '🍲❌'], trans: ['起初', '接著', '然後', '最後'], ans: ['爸爸在廚房裡準備煎蛋。', '他不小心把爐火開得太大了。', '平底鍋裡的蛋冒出黑煙。', '我們的晚餐少了一道菜。'], hint: "先煎蛋，火太大，冒黑煙，最後沒得吃。" },
-            { title: "種樹的收穫", emoji: ['🌱💧', '☀️🌳', '🍎🍎', '😋👍'], trans: ['起初', '接著', '然後', '終於'], ans: ['農夫種下小樹苗並澆水。', '小樹在陽光下慢慢長大。', '秋天時樹上結滿了蘋果。', '大家開心地吃著美味的蘋果。'], hint: "先種樹，再長大，然後結果，最後吃蘋果。" },
+            { title: "種樹的收穫", emoji: ['🌱💧', '☀️🌳', '🍎🍎', '😋👍'], trans: ['起初', '接著', '然後', '終於'], ans: ['農夫種下蘋果樹苗並澆水。', '蘋果樹在陽光下慢慢長大。', '秋天時樹上結滿了蘋果。', '大家開心地吃著美味的蘋果。'], hint: "先種樹，再長大，然後結果，最後吃蘋果。" },
             { title: "遲到的早晨", emoji: ['🏫🏃‍♂️', '🔔🏃‍♂️', '👨‍🏫😠', '🙇‍♂️😔'], trans: ['剛開始', '接著', '然後', '最後'], ans: ['哥哥起晚了，匆忙跑向學校。', '跑到校門時鐘聲已經響了。', '老師嚴厲地批評了他。', '哥哥羞愧地低頭認錯。'], hint: "先跑去學校，鐘響遲到，被老師罵，最後認錯。" },
             { title: "拾金不昧", emoji: ['👧🧹', '🛋️💰', '👩💬', '💖👍'], trans: ['起初', '接著', '然後', '最後'], ans: ['小麗在客廳裡打掃。', '她在沙發下發現了一枚硬幣。', '她立刻把錢交給媽媽。', '媽媽稱讚她是一個誠實的孩子。'], hint: "先打掃，發現錢，交給媽媽，最後被稱讚。" },
             { title: "分心的代價", emoji: ['👦📖', '🪟🕊️', '👀🏃‍♂️', '📝❌'], trans: ['剛開始', '接著', '然後', '最後'], ans: ['小強坐在書桌前認真溫習。', '窗外飛來了一隻可愛的小鳥。', '他跑去窗邊看鳥，忘記了功課。', '他的功課沒做完，被老師批評了。'], hint: "先溫習，小鳥飛來，跑去看鳥，最後功課沒做完。" },
-            { title: "買玩具風波", emoji: ['🛒👩👦', '🧸😭', '👨❌', '🚶‍♂️😔'], trans: ['起初', '接着', '然後', '最後'], ans: ['小明和媽媽去超級市場買菜。', '小明看到玩具吵著要買。', '媽媽堅決地搖頭拒絕了他。', '小明只好失望地跟著回家。'], hint: "先去超市，吵買玩具，被拒絕，最後失望回家。" },
+            { title: "買玩具風波", emoji: ['🛒👩👦', '🧸😭', '👨❌', '🚶‍♂️😔'], trans: ['起初', '接著', '然後', '最後'], ans: ['小明和媽媽去超級市場買菜。', '小明看到玩具吵著要買。', '媽媽堅決地搖頭拒絕了他。', '小明只好失望地跟著回家。'], hint: "先去超市，吵買玩具，被拒絕，最後失望回家。" },
             { title: "意外的禮物", emoji: ['🎂🎉', '🎁🤔', '📖😕', '👩‍👦❤️'], trans: ['起初', '接著', '然後', '最後'], ans: ['家裡為小華舉辦了生日派對。', '媽媽拿出一份禮物，他以為是玩具。', '拆開一看是書本，小華感到失望。', '媽媽溫柔解釋，小華開心地接受了。'], hint: "先開派對，收到禮物，發現是書，最後媽媽解釋。" },
-            { title: "互助的友誼", emoji: ['🚴‍♂️🏞️', '🪨💥', '🤕🩹', '🤝😊'], trans: ['起初', '接著', '然後', '最後'], ans: ['大雄和胖虎一起去公園騎單車。', '大雄不小心撞到石頭跌倒了。', '胖虎立刻停下來幫他包紮傷口。', '他們握手言和，友誼更深厚了。'], hint: "先騎單車，撞石跌倒，幫忙包紮，最後友誼加深。" }
+            { title: "互助的友誼", emoji: ['🚴‍♂️🏞️', '🪨💥', '🤕🩹', '🤝😊'], trans: ['起初', '接著', '然後', '最後'], ans: ['大雄和胖虎一起去公園騎單車。', '大雄不小心撞到石頭跌倒了。', '胖虎立刻停下來幫他包紮傷口。', '他們相互道謝，友誼更深厚了。'], hint: "先騎單車，撞石跌倒，幫忙包紮，最後友誼加深。" }
         ];
 
         // --- 模組 2：寫作積木 (10篇, 完美三階拆分) ---
@@ -378,14 +378,14 @@
             {
                 title: "我的小狗", emoji: "🐕🦴", tut: "t-three-stage",
                 introChunks: ["我家", "有一隻", "可愛的", "小狗，", "是我最要好的", "動物朋友。"],
-                sents: [ ["牠", "全身長滿了", "棕色的", "捲毛。"], ["有一雙", "水汪汪的", "大眼睛", "看著我。"], ["每天", "吃飽後", "就喜歡", "咬骨頭。"] ],
+                sents: [ ["牠", "全身長滿了", "棕色的", "捲毛。"], ["牠有一雙", "水汪汪的", "大眼睛，", "正看著我。"], ["每天", "吃飽後", "就喜歡", "咬骨頭。"] ],
                 conclChunks: ["波波", "真是太可愛了，", "給我的生活", "帶來歡樂，", "我會永遠照顧牠。"],
                 hint: "先寫毛髮，再寫眼睛，最後寫習慣。"
             },
             {
                 title: "美味的西瓜", emoji: "🍉😋", tut: "t-three-stage",
                 introChunks: ["夏天到了，", "天氣", "非常炎熱。", "這時候我最喜歡的", "就是西瓜了。"],
-                sents: [ ["它", "穿著一件", "綠色帶黑條紋的", "外衣。"], ["切開一看，", "裡面是", "紅通通的", "果肉。"], ["咬下一口，", "甜甜的汁液", "充滿了", "嘴巴。"] ],
+                sents: [ ["它", "穿著一件", "綠色帶黑條紋的", "外衣。"], ["切開一看，", "裡面是", "紅通通的", "果肉。"], ["咬下一口，", "甜甜的汁液", "在嘴裡", "散開。"] ],
                 conclChunks: ["西瓜", "真是夏天的", "解暑聖品，", "吃完後", "覺得涼快極了！"],
                 hint: "從外表看到裡面，最後是吃下去的味道。"
             },
@@ -449,7 +449,7 @@
             {
                 title: "海灘之旅", emoji: "🏖️🌊", tut: "t-five-senses",
                 base: "我們去海灘。沙子很軟。海水很藍。我們在堆沙堡。",
-                template: "夏天，我們來到海灘。腳下踩著 {0} 的沙子，眼前是一望無際 {1} 的海水。海浪發出 {2} 的聲音，我們 {3} 堆著沙堡。",
+                template: "夏天，我們來到海灘。腳下踩著 {0} 的沙子，眼前是一望無際的 {1} 海水。海浪發出 {2} 的聲音，我們 {3} 堆著沙堡。",
                 bank: ["金黃色", "蔚藍色", "嘩啦嘩啦", "興奮地", "黑色", "紅色", "滴滴答答", "生氣地"],
                 ans: ["金黃色", "蔚藍色", "嘩啦嘩啦", "興奮地"],
                 hint: "沙子是「金黃」的，海水「蔚藍」，海浪「嘩啦嘩啦」，堆沙堡很「興奮」。"
@@ -496,9 +496,39 @@
             }
         ];
 
-        let seqProgress = JSON.parse(localStorage.getItem('seqBasicProgress')) || new Array(seqData.length).fill(0);
-        let fwProgress = JSON.parse(localStorage.getItem('fwBasicProgress')) || new Array(fwData.length).fill(0);
-        let exProgress = JSON.parse(localStorage.getItem('exBasicProgress')) || new Array(exData.length).fill(0);
+        let seqProgress = JSON.parse(window.__jcmkecSessionStore.getItem('seqBasicProgress')) || new Array(seqData.length).fill(0);
+        let fwProgress = JSON.parse(window.__jcmkecSessionStore.getItem('fwBasicProgress')) || new Array(fwData.length).fill(0);
+        let exProgress = JSON.parse(window.__jcmkecSessionStore.getItem('exBasicProgress')) || new Array(exData.length).fill(0);
+
+        function getWriteModeConfig(mode) {
+            if (mode === 'seq') return { data: seqData, progress: seqProgress, start: startSeq, lastKey: 'writeBasicLastSeqIdx', label: '看圖小偵探', color: 'sky' };
+            if (mode === 'framework') return { data: fwData, progress: fwProgress, start: startFramework, lastKey: 'writeBasicLastFrameworkIdx', label: '寫作積木', color: 'emerald' };
+            return { data: exData, progress: exProgress, start: startExpand, lastKey: 'writeBasicLastExpandIdx', label: '五感擴寫', color: 'purple' };
+        }
+
+        function getWriteResumeIdx(mode) {
+            const config = getWriteModeConfig(mode);
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem(config.lastKey));
+            if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < config.data.length && config.progress[lastIdx] !== 1 && config.progress[lastIdx] !== 2) return lastIdx;
+            return config.progress.findIndex(status => status !== 1 && status !== 2);
+        }
+
+        function continueWriting(mode) {
+            const config = getWriteModeConfig(mode);
+            const idx = getWriteResumeIdx(mode);
+            if (idx === -1) { showToast(`太棒了！${config.label}已全部完成。`); return; }
+            config.start(idx);
+        }
+
+        function renderWriteQuickNav(mode) {
+            const config = getWriteModeConfig(mode);
+            const solved = config.progress.filter(status => status === 1 || status === 2).length;
+            const idx = getWriteResumeIdx(mode);
+            const buttonText = idx === -1 ? '🏆 已完成全部任務' : `▶️ 繼續第 ${idx + 1} 個任務`;
+            const stateText = idx === -1 ? `🎉 ${config.label}已完成 ${solved} / ${config.data.length}` : `${config.label}完成 ${solved} / ${config.data.length} · 下一個：${config.data[idx].title}`;
+            const buttonClass = idx === -1 ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : `bg-${config.color}-600 hover:bg-${config.color}-700 text-white`;
+            return `<div class="sticky top-2 z-10 col-span-full mb-2 bg-white/95 backdrop-blur border-2 border-${config.color}-200 rounded-2xl p-3 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><p class="text-sm md:text-base font-black text-slate-700">${stateText}</p><button type="button" ${idx === -1 ? 'disabled' : ''} onclick="continueWriting('${mode}')" class="w-full sm:w-auto ${buttonClass} font-black px-5 py-3 rounded-xl shadow transition">${buttonText}</button></div>`;
+        }
 
         // ================= 4. 通用：重組與拖拉邏輯 (局部遣返核心 + 專屬動態提示) =================
         
@@ -582,11 +612,11 @@
             } else {
                 currentMistakes++;
                 if (currentMode === 'seq') {
-                    seqProgress[currentIdx] = -1; localStorage.setItem('seqBasicProgress', JSON.stringify(seqProgress));
+                    seqProgress[currentIdx] = -1; window.__jcmkecSessionStore.setItem('seqBasicProgress', JSON.stringify(seqProgress));
                 } else if (currentMode === 'framework') {
-                    fwProgress[currentIdx] = -1; localStorage.setItem('fwBasicProgress', JSON.stringify(fwProgress));
+                    fwProgress[currentIdx] = -1; window.__jcmkecSessionStore.setItem('fwBasicProgress', JSON.stringify(fwProgress));
                 } else if (currentMode === 'expand') {
-                    exProgress[currentIdx] = -1; localStorage.setItem('exBasicProgress', JSON.stringify(exProgress));
+                    exProgress[currentIdx] = -1; window.__jcmkecSessionStore.setItem('exBasicProgress', JSON.stringify(exProgress));
                 }
 
                 wrongSlots = wrongIndices; // 記錄錯的槽位，讓 render 時標成紅色
@@ -618,9 +648,11 @@
                 }
 
                 speakText("排錯了喔，請點擊紅色的積木移出，並查看提示！");
+                window.StudentFeedback?.show(`有 ${wrongIndices.length} 個位置需要調整。請移出紅色積木，並查看提示再試一次。`, 'error');
                 
                 // 重新渲染畫面（此時紅色錯誤積木會持續停留在上方，提示框也會顯示）
                 renderCurrentPlayUI();
+                requestAnimationFrame(() => document.querySelectorAll('.wrong-slot').forEach(slot => window.StudentFeedback?.markWrong(slot)));
 
                 // 3.5秒後自動退回
                 setTimeout(() => {
@@ -633,6 +665,7 @@
                             let slotElem = document.getElementById(`target-slot-${idx}`);
                             if (slotElem) {
                                 slotElem.classList.remove('wrong-slot', 'shake');
+                                window.StudentFeedback?.clear(slotElem);
                             }
 
                             if (currentMode !== 'expand') {
@@ -660,7 +693,7 @@
         // --- 模組 1：看圖小偵探 ---
         function renderSeqDirectory() {
             const dirContainer = document.getElementById('seq-content');
-            let html = '';
+            let html = renderWriteQuickNav('seq');
             seqData.forEach((item, idx) => {
                 let status = seqProgress[idx];
                 let bgClass = 'bg-white';
@@ -681,10 +714,11 @@
         }
 
         function startSeq(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-detective')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-detective')) {
                 pendingIdx = idx; pendingType = 'seq'; showTutorial('t-detective'); return;
             }
             currentIdx = idx; currentMistakes = 0;
+            window.__jcmkecSessionStore.setItem('writeBasicLastSeqIdx', String(idx));
             initReorderState(seqData[idx].ans);
             
             document.getElementById('seq-directory').style.display = 'none';
@@ -786,7 +820,7 @@
 
             if (expGained > 0) {
                 writeExp += expGained;
-                localStorage.setItem('writeBasicExp_v2', writeExp);
+                window.__jcmkecSessionStore.setItem('writeBasicExp_v2', writeExp);
                 updateExpDisplay();
             }
 
@@ -800,7 +834,7 @@
         // --- 模組 2：寫作積木 (三階 小步子) ---
         function renderFrameworkDirectory() {
             const dirContainer = document.getElementById('framework-content');
-            let html = '';
+            let html = renderWriteQuickNav('framework');
             fwData.forEach((item, idx) => {
                 let status = fwProgress[idx];
                 let bgClass = 'bg-white';
@@ -826,10 +860,11 @@
 
         function startFramework(idx, forceStart = false) {
             const data = fwData[idx];
-            if (!forceStart && !localStorage.getItem('tut_seen_' + data.tut)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + data.tut)) {
                 pendingIdx = idx; pendingType = 'framework'; showTutorial(data.tut); return;
             }
             currentIdx = idx; currentPhase = 1; currentSubTask = 0; currentMistakes = 0;
+            window.__jcmkecSessionStore.setItem('writeBasicLastFrameworkIdx', String(idx));
             
             document.getElementById('framework-directory').style.display = 'none';
             document.getElementById('framework-play').style.display = 'flex';
@@ -1009,7 +1044,7 @@
 
             if (expGained > 0) {
                 writeExp += expGained;
-                localStorage.setItem('writeBasicExp_v2', writeExp);
+                window.__jcmkecSessionStore.setItem('writeBasicExp_v2', writeExp);
                 updateExpDisplay();
             }
 
@@ -1023,7 +1058,7 @@
         // --- 模組 3：五感擴寫段落 ---
         function renderExpandDirectory() {
             const dirContainer = document.getElementById('expand-content');
-            let html = '';
+            let html = renderWriteQuickNav('expand');
             exData.forEach((item, idx) => {
                 let status = exProgress[idx];
                 let bgClass = 'bg-white';
@@ -1050,11 +1085,12 @@
 
         function startExpand(idx, forceStart = false) {
             const data = exData[idx];
-            if (!forceStart && !localStorage.getItem('tut_seen_' + data.tut)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + data.tut)) {
                 pendingIdx = idx; pendingType = 'expand'; showTutorial(data.tut); return;
             }
 
             currentIdx = idx; currentMistakes = 0;
+            window.__jcmkecSessionStore.setItem('writeBasicLastExpandIdx', String(idx));
             initReorderState(data.ans); 
             reorderSource = [...data.bank].sort(() => Math.random() - 0.5); 
             
@@ -1173,7 +1209,7 @@
 
             if (expGained > 0) {
                 writeExp += expGained;
-                localStorage.setItem('writeBasicExp_v2', writeExp);
+                window.__jcmkecSessionStore.setItem('writeBasicExp_v2', writeExp);
                 updateExpDisplay();
             }
 
@@ -1227,7 +1263,7 @@
             };
             
             if(seqProgress.filter(p=>p>0).length===seqData.length && fwProgress.filter(p=>p>0).length===fwData.length && exProgress.filter(p=>p>0).length===exData.length) {
-                localStorage.setItem('t_write_1', 'true');
+                window.__jcmkecSessionStore.setItem('t_write_1', 'true');
             }
         }
 
@@ -1276,5 +1312,6 @@
             switchMode('seq');
         }
     </script>
+    <script src="voice-manager.js"></script>
 </body>
 </html>

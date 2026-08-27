@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中華文化與古詩 - SEN基礎訓練</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -46,6 +47,9 @@
         .read-sentence:hover { background-color: #ffedd5; color: #c2410c; }
         .active-sentence { background-color: #fef08a; color: #ea580c; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -145,7 +149,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let cultureExp = parseInt(localStorage.getItem('cultureBasicExp')) || 0;
+        let cultureExp = parseInt(window.__jcmkecSessionStore.getItem('cultureBasicExp')) || 0;
         document.getElementById('exp-display').innerText = cultureExp;
         
         let currentMode = 'poem'; 
@@ -174,14 +178,14 @@
 
         // 一般短句朗讀
         function speakText(text, rate = 0.8) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = cleanTextForSpeech(text);
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK'; 
-                msg.rate = rate; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         // ================= 🌟 卡拉OK 跟讀引擎 =================
@@ -222,26 +226,29 @@
             // 讓視窗自動滾動到正在讀的那一句
             span.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            let text = span.innerText;
-            let cleanText = cleanTextForSpeech(text);
-            let msg = new SpeechSynthesisUtterance(cleanText);
-            msg.lang = 'zh-HK';
-            msg.rate = 0.8; 
-            
-            msg.onend = function() {
-                if (isKaraokePlaying) {
-                    karaokeIndex++;
-                    playNextKaraokeSentence();
-                } else {
-                    stopKaraoke();
-                }
-            };
-            msg.onerror = function() { stopKaraoke(); };
-            window.speechSynthesis.speak(msg);
+            if (!window.LearningVoice) {
+                showToast('朗讀功能正在準備，請稍後再試。');
+                stopKaraoke();
+                return;
+            }
+            const started = window.LearningVoice.speak(span.innerText, {
+                rate: 0.8,
+                label: '跟讀內容',
+                onEnd: function() {
+                    if (isKaraokePlaying) {
+                        karaokeIndex++;
+                        playNextKaraokeSentence();
+                    } else {
+                        stopKaraoke();
+                    }
+                },
+                onError: stopKaraoke
+            });
+            if (!started) stopKaraoke();
         }
 
         function stopKaraoke() {
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            if (window.LearningVoice) window.LearningVoice.stop(true);
             isKaraokePlaying = false;
             document.querySelectorAll('.read-sentence').forEach(s => s.classList.remove('active-sentence'));
             const bp = document.getElementById('btn-play-story'), bs = document.getElementById('btn-stop-story');
@@ -253,16 +260,18 @@
             document.querySelectorAll('.read-sentence').forEach(s => s.classList.remove('active-sentence'));
             spanElement.classList.add('active-sentence');
             
-            let text = spanElement.innerText;
-            let cleanText = cleanTextForSpeech(text);
-            let msg = new SpeechSynthesisUtterance(cleanText);
-            msg.lang = 'zh-HK';
-            msg.rate = 0.8;
-            
-            msg.onend = function() {
+            if (!window.LearningVoice) {
+                showToast('朗讀功能正在準備，請稍後再試。');
                 spanElement.classList.remove('active-sentence');
-            };
-            window.speechSynthesis.speak(msg);
+                return;
+            }
+            const started = window.LearningVoice.speak(spanElement.innerText, {
+                rate: 0.8,
+                label: '這一句',
+                onEnd: function() { spanElement.classList.remove('active-sentence'); },
+                onError: function() { spanElement.classList.remove('active-sentence'); }
+            });
+            if (!started) spanElement.classList.remove('active-sentence');
         }
 
         // 把純文字切成句子並包裝成可點擊/跟讀的 span
@@ -314,7 +323,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -414,7 +423,7 @@
                 ['這首詩描寫了一幅生機勃勃的什麼季節的景色？', ['春天 🌱', '冬天 ❄️', '秋天 🍂'], 0, '黃鸝唱歌、翠綠的柳樹，都展現了春天生機勃勃的景象。'],
                 ['詩句中「上青天」的動物是什麼？', ['黃鸝 🐤', '白鷺 🕊️', '大雁 🦅'], 1, '原句為「一行白鷺上青天」，白鷺排成一行飛向藍天。'],
                 ['「兩個黃鸝鳴翠柳」中的柳樹是什麼顏色的？', ['翠綠色 🟩', '黃色 🟨', '白色 ⬜'], 0, '「翠」代表翠綠色，形容春天新長出來的柳葉顏色。'],
-                ['詩中提到門口停泊著要開往哪裡的船？', ['西嶺 ⛰️', '東吳 ⛵', '北極 🧊'], 1, '原句寫「門泊東吳萬里船」，指停著要開往遙遠東吳的船。']
+                ['詩中提到門口停泊著從哪裡遠道而來的船？', ['西嶺 ⛰️', '東吳 ⛵', '北極 🧊'], 1, '原句寫「門泊東吳萬里船」，指門前停泊著從遙遠東吳而來的船。']
             ]),
             cP('遊子吟', '唐・孟郊', ['慈母手中線，', '遊子身上衣。', '臨行密密縫，', '意恐遲遲歸。', '誰言寸草心，', '報得三春暉。'], [
                 ['「慈母手中線」的下一句是什麼？', ['意恐遲遲歸 🕰️', '遊子身上衣 👕', '報得三春暉 ☀️'], 1, '原詩是「慈母手中線，遊子身上衣」。'],
@@ -520,8 +529,8 @@
             ])
         ];
 
-        let poemProgress = JSON.parse(localStorage.getItem('poemBasicProgress')) || new Array(poemData.length).fill(0);
-        let cultureProgress = JSON.parse(localStorage.getItem('cultureBasicProgress')) || new Array(cultureData.length).fill(0);
+        let poemProgress = JSON.parse(window.__jcmkecSessionStore.getItem('poemBasicProgress')) || new Array(poemData.length).fill(0);
+        let cultureProgress = JSON.parse(window.__jcmkecSessionStore.getItem('cultureBasicProgress')) || new Array(cultureData.length).fill(0);
 
         function renderPoemDirectory() {
             const dirContainer = document.getElementById('poem-content');
@@ -548,7 +557,7 @@
         }
 
         function startPoem(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-poem')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-poem')) {
                 pendingTaskIdx = idx; pendingTaskType = 'poem'; showTutorial('t-poem'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -613,7 +622,7 @@
         }
 
         function startCulture(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-culture')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-culture')) {
                 pendingTaskIdx = idx; pendingTaskType = 'culture'; showTutorial('t-culture'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -711,20 +720,17 @@
 
         // 輔助功能：連讀題目和選項 (動態抓取變數，不經過 HTML 屬性)
         function speakFullQuestion() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const dataPool = currentMode === 'poem' ? poemData : cultureData;
-                const qData = dataPool[currentIdx].qs[currentQIdx];
-                let fullText = qData.q + " 選項有：";
-                qData.opts.forEach((opt, idx) => {
-                    fullText += `，第${idx+1}：${opt}。`;
-                });
-                let cleanText = cleanTextForSpeech(fullText);
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK'; 
-                msg.rate = 0.8; 
-                window.speechSynthesis.speak(msg);
+            const dataPool = currentMode === 'poem' ? poemData : cultureData;
+            const qData = dataPool[currentIdx].qs[currentQIdx];
+            let fullText = qData.q + " 選項有：";
+            qData.opts.forEach((opt, idx) => {
+                fullText += `，第${idx+1}：${opt}。`;
+            });
+            if (!window.LearningVoice) {
+                showToast('朗讀功能正在準備，請稍後再試。');
+                return;
             }
+            window.LearningVoice.toggle(fullText, { rate: 0.8, label: '題目與選項' });
         }
 
         function checkAnswer(btn, isCorr, type) {
@@ -750,11 +756,11 @@
                         
                         if (progArr[currentIdx] !== 1) {
                             cultureExp += expGained;
-                            localStorage.setItem('cultureBasicExp', cultureExp);
+                            window.__jcmkecSessionStore.setItem('cultureBasicExp', cultureExp);
                             document.getElementById('exp-display').innerText = cultureExp;
                             progArr[currentIdx] = 1;
-                            if(type==='poem') localStorage.setItem('poemBasicProgress', JSON.stringify(progArr));
-                            else localStorage.setItem('cultureBasicProgress', JSON.stringify(progArr));
+                            if(type==='poem') window.__jcmkecSessionStore.setItem('poemBasicProgress', JSON.stringify(progArr));
+                            else window.__jcmkecSessionStore.setItem('cultureBasicProgress', JSON.stringify(progArr));
                         }
                         
                         document.getElementById('feedback-desc').innerText = `太厲害了！你完成了這篇的 5 道挑戰題！\n✨ 獲得 ${expGained} 經驗值`;
@@ -797,7 +803,7 @@
             if (pb) pb.style.width = percent + '%';
             
             // 首頁連動
-            if(pDone === 10 && cDone === 10) localStorage.setItem('t_culture_1', 'true');
+            if(pDone === 10 && cDone === 10) window.__jcmkecSessionStore.setItem('t_culture_1', 'true');
         }
 
         function backToDirectoryFromFinish() {
@@ -816,5 +822,6 @@
             switchMode('poem');
         }
     </script>
+    <script src="voice-manager.js"></script>
 </body>
 </html>

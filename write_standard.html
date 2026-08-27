@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>綜合寫作專區 - 標準常規特訓</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -76,6 +77,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden bg-grid-pattern">
 
@@ -196,7 +200,7 @@
 
     <script>
         // ================= 1. 核心狀態 =================
-        let writeExp = parseInt(localStorage.getItem('writeStdExp_v6')) || 0;
+        let writeExp = parseInt(window.__jcmkecSessionStore.getItem('writeStdExp_v6')) || 0;
         document.getElementById('exp-display').innerText = writeExp;
         
         let currentMode = 'expand'; 
@@ -218,13 +222,14 @@
         }
 
         function speakText(text, rate = 0.95) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-                msg.lang = 'zh-HK'; 
-                msg.rate = rate; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         function showToast(message) {
@@ -272,7 +277,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[tutKey];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -1198,9 +1203,9 @@
             }
         ];
 
-        let fwProgress = JSON.parse(localStorage.getItem('fwStdProgress_v9')) || new Array(expandData.length).fill(0);
-        let exProgress = JSON.parse(localStorage.getItem('exStdProgress_v9')) || new Array(expoData.length).fill(0);
-        let trProgress = JSON.parse(localStorage.getItem('trStdProgress_v9')) || new Array(transData.length).fill(0);
+        let fwProgress = JSON.parse(window.__jcmkecSessionStore.getItem('fwStdProgress_v9')) || new Array(expandData.length).fill(0);
+        let exProgress = JSON.parse(window.__jcmkecSessionStore.getItem('exStdProgress_v9')) || new Array(expoData.length).fill(0);
+        let trProgress = JSON.parse(window.__jcmkecSessionStore.getItem('trStdProgress_v9')) || new Array(transData.length).fill(0);
 
         // ================= 4. 全局核心：碎片重組引擎 =================
         function initReorderState(correctArr) {
@@ -1271,15 +1276,15 @@
                 let hintText = "";
 
                 if (currentMode === 'expand') { 
-                    fwProgress[currentIdx] = -1; localStorage.setItem('fwStdProgress_v9', JSON.stringify(fwProgress)); 
+                    fwProgress[currentIdx] = -1; window.__jcmkecSessionStore.setItem('fwStdProgress_v9', JSON.stringify(fwProgress));
                     hintText = expandData[currentIdx].questions[currentSubTask].hint;
                 }
                 else if (currentMode === 'expo') { 
-                    exProgress[currentIdx] = -1; localStorage.setItem('exStdProgress_v9', JSON.stringify(exProgress)); 
+                    exProgress[currentIdx] = -1; window.__jcmkecSessionStore.setItem('exStdProgress_v9', JSON.stringify(exProgress));
                     hintText = expoData[currentIdx].stages[currentSubTask].hint;
                 }
                 else if (currentMode === 'trans') { 
-                    trProgress[currentIdx] = -1; localStorage.setItem('trStdProgress_v9', JSON.stringify(trProgress)); 
+                    trProgress[currentIdx] = -1; window.__jcmkecSessionStore.setItem('trStdProgress_v9', JSON.stringify(trProgress));
                     hintText = transData[currentIdx].stages[currentSubTask].hint;
                 }
 
@@ -1291,10 +1296,12 @@
                     if (slotElem) {
                         slotElem.classList.remove('bg-blue-500', 'bg-blue-600', 'bg-teal-500', 'bg-teal-600', 'bg-amber-500', 'bg-amber-600', 'border-blue-600', 'border-teal-600', 'border-amber-600', 'text-white', 'text-slate-400');
                         slotElem.classList.add('wrong-slot', 'shake');
+                        window.StudentFeedback?.markWrong(slotElem);
                     }
                 });
                 
                 speakText("排錯了喔，請看提示再試一次！");
+                window.StudentFeedback?.show(`有 ${wrongIndices.length} 個位置需要調整。請移出紅色積木，並查看提示再試一次。`, 'error');
                 
                 const hintBox = document.getElementById('dynamic-hint-box');
                 document.getElementById('hint-text').innerHTML = "💡 提示：" + hintText;
@@ -1311,7 +1318,10 @@
                             
                             let slotId = currentMode === 'expand' ? `expand-slot-${idx}` : (currentMode === 'expo' ? `expo-slot-${idx}` : `trans-slot-${idx}`);
                             let slotElem = document.getElementById(slotId);
-                            if (slotElem) slotElem.classList.remove('wrong-slot', 'shake');
+                            if (slotElem) {
+                                slotElem.classList.remove('wrong-slot', 'shake');
+                                window.StudentFeedback?.clear(slotElem);
+                            }
 
                             let emptySourceIdx = reorderSource.indexOf(null);
                             if(emptySourceIdx !== -1) reorderSource[emptySourceIdx] = chunk;
@@ -1360,7 +1370,7 @@
 
         function startExpand(idx, forceStart = false) {
             const data = expandData[idx];
-            if (!forceStart && !localStorage.getItem('tut_seen_t-expand-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-expand-std')) {
                 pendingIdx = idx; pendingType = 'expand'; showTutorial('t-expand-std'); return;
             }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0;
@@ -1446,7 +1456,7 @@
             
             let expGained = 4; 
             writeExp += expGained;
-            localStorage.setItem('writeStdExp_v6', writeExp);
+            window.__jcmkecSessionStore.setItem('writeStdExp_v6', writeExp);
             updateExpDisplay();
 
             let expMsg = `獲得 ${expGained} 點經驗值 ✨`;
@@ -1461,7 +1471,7 @@
                 } else {
                     if (fwProgress[currentIdx] !== 1 && fwProgress[currentIdx] !== 2) {
                         fwProgress[currentIdx] = 1;
-                        localStorage.setItem('fwStdProgress_v9', JSON.stringify(fwProgress));
+                        window.__jcmkecSessionStore.setItem('fwStdProgress_v9', JSON.stringify(fwProgress));
                     }
                     showToast("恭喜完成該場景擴寫！"); 
                     backToDirectory();
@@ -1495,7 +1505,7 @@
 
         function startExpo(idx, forceStart = false) {
             const data = expoData[idx];
-            if (!forceStart && !localStorage.getItem('tut_seen_t-expo-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-expo-std')) {
                 pendingIdx = idx; pendingType = 'expo'; showTutorial('t-expo-std'); return;
             }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0;
@@ -1597,7 +1607,7 @@
 
             let expGained = currentMistakes === 0 ? 10 : 5; 
             writeExp += expGained;
-            localStorage.setItem('writeStdExp_v6', writeExp);
+            window.__jcmkecSessionStore.setItem('writeStdExp_v6', writeExp);
             updateExpDisplay();
 
             let expMsg = `獲得 ${expGained} 點經驗值 ✨`;
@@ -1612,7 +1622,7 @@
                 } else {
                     if (exProgress[currentIdx] !== 1 && exProgress[currentIdx] !== 2) {
                         exProgress[currentIdx] = 1; 
-                        localStorage.setItem('exStdProgress_v9', JSON.stringify(exProgress));
+                        window.__jcmkecSessionStore.setItem('exStdProgress_v9', JSON.stringify(exProgress));
                     }
                     showToast("恭喜完成三階說明文挑戰！");
                     backToDirectory();
@@ -1646,7 +1656,7 @@
 
         function startTrans(idx, forceStart = false) {
             const data = transData[idx];
-            if (!forceStart && !localStorage.getItem('tut_seen_t-trans-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-trans-std')) {
                 pendingIdx = idx; pendingType = 'trans'; showTutorial('t-trans-std'); return;
             }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0;
@@ -1787,7 +1797,7 @@
 
             let expGained = currentMistakes === 0 ? 10 : 5; 
             writeExp += expGained;
-            localStorage.setItem('writeStdExp_v6', writeExp);
+            window.__jcmkecSessionStore.setItem('writeStdExp_v6', writeExp);
             updateExpDisplay();
 
             let expMsg = `獲得 ${expGained} 點經驗值 ✨`;
@@ -1803,7 +1813,7 @@
                 } else {
                     if (trProgress[currentIdx] !== 1 && trProgress[currentIdx] !== 2) {
                         trProgress[currentIdx] = 1; 
-                        localStorage.setItem('trStdProgress_v9', JSON.stringify(trProgress));
+                        window.__jcmkecSessionStore.setItem('trStdProgress_v9', JSON.stringify(trProgress));
                     }
                     showToast("恭喜完成過渡句三階挑戰！");
                     backToDirectory();
@@ -1846,7 +1856,7 @@
             };
             
             if(fwProgress.filter(p=>p>0).length===expandData.length && exProgress.filter(p=>p>0).length===expoData.length && trProgress.filter(p=>p>0).length===transData.length) {
-                localStorage.setItem('t_write_2', 'true');
+                window.__jcmkecSessionStore.setItem('t_write_2', 'true');
             }
         }
 
@@ -1895,5 +1905,7 @@
             switchMode('expand');
         }
     </script>
+    <script src="voice-manager.js"></script>
+    <script src="mobile-long-course-nav.js"></script>
 </body>
 </html>

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聆聽與說話 - 拔尖進階特訓</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -36,6 +37,9 @@
 
         .tag-badge { background-color: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -124,7 +128,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let advExp = parseInt(localStorage.getItem('listenAdvExp')) || 0;
+        let advExp = parseInt(window.__jcmkecSessionStore.getItem('listenAdvExp')) || 0;
         document.getElementById('exp-display').innerText = advExp;
         
         let currentMode = 'listen'; 
@@ -144,55 +148,48 @@
 
         // 強制廣東話 (zh-HK)
         function speakText(text, rate = 0.85) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let msg = new SpeechSynthesisUtterance(text);
-                msg.lang = 'zh-HK'; 
-                msg.rate = rate; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
+            }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
+        }
+
+        // 播放與停止廣播：完整故事與題目小喇叭共用同一個語音管理器。
+        function resetStoryControls() {
+            const btnPlay = document.getElementById('btn-play-story');
+            const btnStop = document.getElementById('btn-stop-story');
+            if (btnPlay && btnStop) {
+                btnPlay.classList.remove('hidden');
+                btnStop.classList.add('hidden');
             }
         }
 
-        // 播放與停止廣播
         function playStoryTTS() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const story = listenData[currentStoryIdx];
-                let cleanText = story.text.replace(/<br\s*\/?>/gi, '。').replace(/<[^>]*>?/gm, '').replace(/[✅❌💡【】]/g, '').replace(/&nbsp;/g, ' ');
-                
-                storyUtterance = new SpeechSynthesisUtterance(cleanText);
-                storyUtterance.lang = 'zh-HK'; 
-                storyUtterance.rate = 0.85; 
-
-                storyUtterance.onstart = function() {
+            const story = listenData[currentStoryIdx];
+            if (!story || !window.LearningVoice) {
+                showToast('朗讀功能正在準備，請稍後再試。');
+                return;
+            }
+            const started = window.LearningVoice.speak(story.text, {
+                rate: 0.85,
+                label: '長篇故事',
+                onStart: function () {
                     document.getElementById('btn-play-story').classList.add('hidden');
                     document.getElementById('btn-stop-story').classList.remove('hidden');
-                };
-                storyUtterance.onend = function() {
-                    document.getElementById('btn-play-story').classList.remove('hidden');
-                    document.getElementById('btn-stop-story').classList.add('hidden');
-                };
-                storyUtterance.onerror = function() {
-                    document.getElementById('btn-play-story').classList.remove('hidden');
-                    document.getElementById('btn-stop-story').classList.add('hidden');
-                };
-
-                window.speechSynthesis.speak(storyUtterance);
-            } else {
-                showToast("您的瀏覽器不支援語音功能。");
-            }
+                },
+                onEnd: resetStoryControls,
+                onError: resetStoryControls
+            });
+            if (!started) resetStoryControls();
         }
 
         function stopStoryTTS() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const btnPlay = document.getElementById('btn-play-story');
-                const btnStop = document.getElementById('btn-stop-story');
-                if (btnPlay && btnStop) {
-                    btnPlay.classList.remove('hidden');
-                    btnStop.classList.add('hidden');
-                }
-            }
+            if (window.LearningVoice) window.LearningVoice.stop();
+            resetStoryControls();
         }
 
         // ================= 2. 教學內容 =================
@@ -225,7 +222,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -311,7 +308,7 @@
             },
             {
                 title: '消失的青黴素', 
-                text: '1928年的夏天，英國細菌學家弗萊明去度假了。因為走得匆忙，他忘記把實驗室裡培養細菌的培養皿清理乾淨。幾個星期後，當他回到實驗室時，發現一個培養皿發霉了，長出了一團青綠色的黴菌。換作一般人，可能早就把這個發臭的培養皿扔進垃圾桶了。但弗萊明卻敏銳地觀察到一個奇特的現象：在青綠色黴菌的周圍，原本生長茂盛的葡萄球菌竟然全部消失了，形成了一個清晰的無菌圈。他大膽推測，這種黴菌分泌出了一種能殺死細菌的物質。經過反覆提煉和研究，他終於發現了拯救無數生命的抗生素——青黴素。',
+                text: '1928年的夏天，英國細菌學家弗萊明去度假了。因為走得匆忙，他忘記把實驗室裡培養細菌的培養皿清理乾淨。幾個星期後，當他回到實驗室時，發現一個培養皿發霉了，長出了一團青綠色的黴菌。換作一般人，可能早就把這個發臭的培養皿扔進垃圾桶了。但弗萊明卻敏銳地觀察到一個奇特的現象：在青綠色黴菌的周圍，原本生長茂盛的葡萄球菌竟然全部消失了，形成了一個清晰的無菌圈。他大膽推測，這種黴菌分泌出了一種能抑制細菌生長的物質，並把這項發現發表出來。後來，弗洛里、錢恩等科學家進一步提純、測試和發展青黴素，使它成為拯救無數生命的抗生素。',
                 qs: [
                     ['提取資訊', '弗萊明度假回來後，在實驗室發現了什麼異常？', '實驗室被小偷洗劫了', '一個未清理的培養皿長出了青綠色的黴菌', '所有的細菌都死光了', '顯微鏡壞了', 1],
                     ['細節推斷', '「換作一般人，可能早就把培養皿扔進垃圾桶了」，這句話有什麼作用？', '說明實驗室很髒', '反襯出弗萊明作為科學家異於常人的敏銳觀察力與好奇心', '批評弗萊明不講衛生', '說明垃圾桶不夠大', 1],
@@ -423,7 +420,7 @@
             }
         ];
 
-        let listenProgress = JSON.parse(localStorage.getItem('listenAdvProgress')) || new Array(listenData.length).fill(0);
+        let listenProgress = JSON.parse(window.__jcmkecSessionStore.getItem('listenAdvProgress')) || new Array(listenData.length).fill(0);
 
         function renderListenDirectory() {
             const dirContainer = document.getElementById('listen-content');
@@ -453,7 +450,7 @@
         }
 
         function startListen(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-adv-listen')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-adv-listen')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'listen';
                 showTutorial('t-adv-listen');
@@ -545,10 +542,10 @@
                     } else {
                         if (listenProgress[currentStoryIdx] !== 1) {
                             advExp += 50; // 拔尖版長篇給 50 經驗
-                            localStorage.setItem('listenAdvExp', advExp);
+                            window.__jcmkecSessionStore.setItem('listenAdvExp', advExp);
                             document.getElementById('exp-display').innerText = advExp;
                             listenProgress[currentStoryIdx] = 1;
-                            localStorage.setItem('listenAdvProgress', JSON.stringify(listenProgress));
+                            window.__jcmkecSessionStore.setItem('listenAdvProgress', JSON.stringify(listenProgress));
                         }
                         
                         document.getElementById('feedback-desc').innerText = "你成功完成了 8 道最高難度的深層推論題！獲得 50 EXP！";
@@ -595,7 +592,7 @@
             { e: '🐸🦅🌍', t: '井底之蛙的廣闊世界', base: '一隻老鷹飛過井口，看見井底之蛙。老鷹決定用爪子把青蛙抓出水井，帶牠看看世界。', task: '青蛙第一次離開水井，牠看到了什麼令人震撼的景象？牠有什麼感悟？', sample: '大家好。老鷹帶著青蛙飛上高空。青蛙嚇得睜開眼睛，看見了連綿的群山、浩瀚的海洋和無邊無際的藍天。牠驚嘆道：「原來天空不是圓的，世界大得超乎想像！」牠為自己以前的自大感到羞愧。這告訴我們：「人的認知是受環境局限的。我們必須保持謙虛，勇於跳出舒適圈，才能看到真正的世界。」' }
         ];
 
-        let speakProgress = JSON.parse(localStorage.getItem('speakAdvProgress')) || new Array(speakData.length).fill(0);
+        let speakProgress = JSON.parse(window.__jcmkecSessionStore.getItem('speakAdvProgress')) || new Array(speakData.length).fill(0);
 
         function renderSpeakDirectory() {
             const dirContainer = document.getElementById('speak-content');
@@ -618,7 +615,7 @@
         }
 
         function startSpeak(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-adv-speak')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-adv-speak')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'speak';
                 showTutorial('t-adv-speak');
@@ -680,17 +677,17 @@
             stopStoryTTS();
             if (speakProgress[currentStoryIdx] !== 1) {
                 advExp += 20;
-                localStorage.setItem('listenAdvExp', advExp);
+                window.__jcmkecSessionStore.setItem('listenAdvExp', advExp);
                 document.getElementById('exp-display').innerText = advExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
                 
                 speakProgress[currentStoryIdx] = 1;
-                localStorage.setItem('speakAdvProgress', JSON.stringify(speakProgress));
+                window.__jcmkecSessionStore.setItem('speakAdvProgress', JSON.stringify(speakProgress));
                 showToast("高階口語延展完成！+20 EXP");
                 
                 if (listenProgress.filter(p=>p===1).length === listenData.length && speakProgress.filter(p=>p===1).length === speakData.length) {
-                    localStorage.setItem('t_listen_3', 'true');
+                    window.__jcmkecSessionStore.setItem('t_listen_3', 'true');
                 }
             }
             switchMode('speak');
@@ -701,5 +698,7 @@
             switchMode('listen');
         }
     </script>
+    <script src="voice-manager.js"></script>
+    <script src="mobile-long-course-nav.js"></script>
 </body>
 </html>

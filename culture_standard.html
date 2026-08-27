@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中華文化與古詩 - 標準常規訓練</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -42,6 +43,9 @@
         .read-sentence:hover { background-color: #ffedd5; color: #c2410c; }
         .active-sentence { background-color: #fef08a; color: #ea580c; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -148,7 +152,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let stdExp = parseInt(localStorage.getItem('cultureStandardExp')) || 0;
+        let stdExp = parseInt(window.__jcmkecSessionStore.getItem('cultureStandardExp')) || 0;
         document.getElementById('exp-display').innerText = stdExp;
         
         let currentMode = 'poem'; 
@@ -174,14 +178,14 @@
 
         // 一般短句朗讀
         function speakText(text, rate = 0.85) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = cleanTextForSpeech(text);
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK'; 
-                msg.rate = rate; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         // ================= 🌟 卡拉OK 跟讀引擎 =================
@@ -214,26 +218,29 @@
             span.classList.add('active-sentence');
             span.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            let text = span.innerText;
-            let cleanText = cleanTextForSpeech(text);
-            let msg = new SpeechSynthesisUtterance(cleanText);
-            msg.lang = 'zh-HK';
-            msg.rate = 0.85; 
-            
-            msg.onend = function() {
-                if (isKaraokePlaying) {
-                    karaokeIndex++;
-                    playNextKaraokeSentence();
-                } else {
-                    stopKaraoke();
-                }
-            };
-            msg.onerror = function() { stopKaraoke(); };
-            window.speechSynthesis.speak(msg);
+            if (!window.LearningVoice) {
+                showToast('朗讀功能正在準備，請稍後再試。');
+                stopKaraoke();
+                return;
+            }
+            const started = window.LearningVoice.speak(span.innerText, {
+                rate: 0.85,
+                label: '跟讀內容',
+                onEnd: function() {
+                    if (isKaraokePlaying) {
+                        karaokeIndex++;
+                        playNextKaraokeSentence();
+                    } else {
+                        stopKaraoke();
+                    }
+                },
+                onError: stopKaraoke
+            });
+            if (!started) stopKaraoke();
         }
 
         function stopKaraoke() {
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            if (window.LearningVoice) window.LearningVoice.stop(true);
             isKaraokePlaying = false;
             document.querySelectorAll('.read-sentence').forEach(s => s.classList.remove('active-sentence'));
             const bp = document.getElementById('btn-play-story'), bs = document.getElementById('btn-stop-story');
@@ -245,16 +252,18 @@
             document.querySelectorAll('.read-sentence').forEach(s => s.classList.remove('active-sentence'));
             spanElement.classList.add('active-sentence');
             
-            let text = spanElement.innerText;
-            let cleanText = cleanTextForSpeech(text);
-            let msg = new SpeechSynthesisUtterance(cleanText);
-            msg.lang = 'zh-HK';
-            msg.rate = 0.85;
-            
-            msg.onend = function() {
+            if (!window.LearningVoice) {
+                showToast('朗讀功能正在準備，請稍後再試。');
                 spanElement.classList.remove('active-sentence');
-            };
-            window.speechSynthesis.speak(msg);
+                return;
+            }
+            const started = window.LearningVoice.speak(spanElement.innerText, {
+                rate: 0.85,
+                label: '這一句',
+                onEnd: function() { spanElement.classList.remove('active-sentence'); },
+                onError: function() { spanElement.classList.remove('active-sentence'); }
+            });
+            if (!started) spanElement.classList.remove('active-sentence');
         }
 
         function parseAndWrapSentences(textString) {
@@ -300,7 +309,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -530,8 +539,8 @@
             ])
         ];
 
-        let poemProgress = JSON.parse(localStorage.getItem('poemStandardProgress')) || new Array(poemData.length).fill(0);
-        let cultureProgress = JSON.parse(localStorage.getItem('cultureStandardProgress')) || new Array(cultureData.length).fill(0);
+        let poemProgress = JSON.parse(window.__jcmkecSessionStore.getItem('poemStandardProgress')) || new Array(poemData.length).fill(0);
+        let cultureProgress = JSON.parse(window.__jcmkecSessionStore.getItem('cultureStandardProgress')) || new Array(cultureData.length).fill(0);
 
         function renderPoemDirectory() {
             const dirContainer = document.getElementById('poem-content');
@@ -560,7 +569,7 @@
         }
 
         function startPoem(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-poem-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-poem-std')) {
                 pendingTaskIdx = idx; pendingTaskType = 'poem'; showTutorial('t-poem-std'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -628,7 +637,7 @@
         }
 
         function startCulture(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-culture-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-culture-std')) {
                 pendingTaskIdx = idx; pendingTaskType = 'culture'; showTutorial('t-culture-std'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -774,7 +783,7 @@
 
                         if (expGained > 0) {
                             stdExp += expGained;
-                            localStorage.setItem('cultureStandardExp', stdExp);
+                            window.__jcmkecSessionStore.setItem('cultureStandardExp', stdExp);
                             document.getElementById('exp-display').innerText = stdExp;
                             document.getElementById('exp-display').classList.add('pop');
                             setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -782,8 +791,8 @@
                         
                         if (finalStatus === 1 || previousStatus !== 1) {
                             progArr[currentIdx] = finalStatus;
-                            if(type==='poem') localStorage.setItem('poemStandardProgress', JSON.stringify(progArr));
-                            else localStorage.setItem('cultureStandardProgress', JSON.stringify(progArr));
+                            if(type==='poem') window.__jcmkecSessionStore.setItem('poemStandardProgress', JSON.stringify(progArr));
+                            else window.__jcmkecSessionStore.setItem('cultureStandardProgress', JSON.stringify(progArr));
                         }
 
                         let expMsg = expGained > 0 
@@ -811,8 +820,8 @@
                 let progArr = type === 'poem' ? poemProgress : cultureProgress;
                 if (progArr[currentIdx] !== 1 && progArr[currentIdx] !== 2) {
                     progArr[currentIdx] = -1;
-                    if(type==='poem') localStorage.setItem('poemStandardProgress', JSON.stringify(progArr));
-                    else localStorage.setItem('cultureStandardProgress', JSON.stringify(progArr));
+                    if(type==='poem') window.__jcmkecSessionStore.setItem('poemStandardProgress', JSON.stringify(progArr));
+                    else window.__jcmkecSessionStore.setItem('cultureStandardProgress', JSON.stringify(progArr));
                 }
                 
                 const hintBox = document.getElementById('dynamic-hint-box');
@@ -836,7 +845,7 @@
             const pb = document.getElementById('progress-bar');
             if (pb) pb.style.width = percent + '%';
             
-            if(pDone === 10 && cDone === 10) localStorage.setItem('t_culture_2', 'true');
+            if(pDone === 10 && cDone === 10) window.__jcmkecSessionStore.setItem('t_culture_2', 'true');
         }
 
         function backToDirectoryFromFinish() {
@@ -855,5 +864,6 @@
             switchMode('poem');
         }
     </script>
+    <script src="voice-manager.js"></script>
 </body>
 </html>

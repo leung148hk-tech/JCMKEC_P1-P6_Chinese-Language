@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>段落與實用文 - 拔尖擴充挑戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -71,6 +72,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -176,7 +180,7 @@
 
     <script>
         // ================= 1. 核心狀態與大腦字典 =================
-        let paraExp = parseInt(localStorage.getItem('paraAdvExp')) || 0;
+        let paraExp = parseInt(window.__jcmkecSessionStore.getItem('paraAdvExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -196,15 +200,15 @@
 
         document.getElementById('exp-display').innerText = paraExp;
 
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = text.replace(/<br\s*\/?>/gi, '。').replace(/<[^>]*>?/gm, '').replace(/[✅❌💡【】]/g, '').replace(/&nbsp;/g, ' ');
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK';
-                msg.rate = 0.92; 
-                window.speechSynthesis.speak(msg);
+        function speakText(text, rate = 0.9) {
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         function showToast(message) {
@@ -306,7 +310,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[categoryId];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         }
 
         function closeTutorial() {
@@ -414,7 +418,7 @@
             ['正式公函 (投訴/建議)', ['環保署署長 鈞鑒：', '本區近月常有非法傾倒建築廢料的情況，嚴重影響環境衛生。', '懇請 貴署盡快派員巡查，並加強檢控違法人士。', '敬候', '示覆', '北區居民 陳大文 謹啟', '二零二六年十一月十日'], '正式公函', '公函格式：上款(職銜+鈞鑒) 👉 正文 👉 祝頌語(敬候 示覆 拆兩行) 👉 下款謹啟 👉 日期。注意特定長官上款不可與「敬啟者」並用！'],
             ['學校圖書館改善建議書', ['關於改善圖書館設施的建議書', '敬愛的校長：', '現況分析：近日發現圖書館的部分座椅損壞，且燈光較為昏暗。', '具體建議：建議校方盡快更換損壞的座椅，並加裝節能護眼燈管。', '預期效益：此舉將能大大提升同學的閱讀體驗，保護視力。', '學生會會長 李小華 謹啟', '三月十五日'], '建議書', '建議書格式：標題 👉 上款 👉 現況 👉 建議 👉 效益 👉 下款謹啟 👉 日期。'],
             ['環保專題演講辭', ['各位評判、各位老師、各位同學：', '大家好！今天我演講的題目是「減塑生活，由我做起」。', '地球正面臨嚴重的塑膠污染，我們必須從日常生活中減少使用即棄塑膠。', '只要每人多走一步，自備環保袋，我們的家園一定會變得更美好。', '我的演講到此結束，多謝各位。'], '演講辭', '演講辭格式：稱呼語 👉 開場白(講題) 👉 正文論述 👉 結語呼籲 👉 致謝。'],
-            ['學生會第一次會議紀錄', ['光明中學學生會 第一次會議紀錄', '日期：九月五日 / 時間：下午四時 / 地點：活動室', '主席：陳大文 / 紀錄：李小花 / 出席者：全體委員', '動議：張小明動議舉辦「舊書回收義賣」活動。和議：王大志和議。', '決議：經全體投票，一致通過舉辦該活動。', '散會時間：下午五時三聽。'], '會議紀錄', '會議紀錄格式：標題 👉 時間地點 👉 職位及出席名單 👉 動議與和議 👉 決議 👉 散會時間。']
+            ['學生會第一次會議紀錄', ['光明中學學生會 第一次會議紀錄', '日期：九月五日 / 時間：下午四時 / 地點：活動室', '主席：陳大文 / 紀錄：李小花 / 出席者：全體委員', '動議：張小明動議舉辦「舊書回收義賣」活動。和議：王大志和議。', '決議：經全體投票，一致通過舉辦該活動。', '散會時間：下午五時三十分。'], '會議紀錄', '會議紀錄格式：標題 👉 時間地點 👉 職位及出席名單 👉 動議與和議 👉 決議 👉 散會時間。']
         ];
         let practicalAdvReorderPool = [];
         for(let i=0; i<40; i++) {
@@ -430,7 +434,7 @@
             ...formatPracticalReorderData(practicalAdvReorderPool, 'p-adv-reorder', '高級全文重組：將複雜的實用文段落拼砌成正確格式。')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('paraAdvProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('paraAdvProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         // ================= 4. 高級公文格式沙盒底層邏輯與資料 =================
         const sandboxBricks = {
@@ -507,7 +511,7 @@
 
         let currentActiveTemplate = 'official_letter';
         let sandboxSelectedBrick = null;
-        let sandboxCompleted = JSON.parse(localStorage.getItem('sandboxAdvCompleted')) || [];
+        let sandboxCompleted = JSON.parse(window.__jcmkecSessionStore.getItem('sandboxAdvCompleted')) || [];
 
         function renderSandboxTemplates() {
             const container = document.getElementById('sandbox-templates');
@@ -658,8 +662,11 @@
             const isAllFilled = currentSlots.every(slot => slot.filled !== null);
             
             if (!isAllFilled) {
+                const sandboxPad = document.getElementById('sandbox-layout-pad');
                 showToast("還有槽位沒有排好喔！");
+                window.StudentFeedback?.wrong(sandboxPad, '還有格式槽位未完成，請先填好所有位置再檢查。');
                 speakText("還有格式未排好喔，請繼續努力！");
+                setTimeout(() => window.StudentFeedback?.clear(sandboxPad), 1200);
                 return;
             }
 
@@ -680,10 +687,10 @@
 
                 if (!isAlreadyCompleted) {
                     sandboxCompleted.push(currentActiveTemplate);
-                    localStorage.setItem('sandboxAdvCompleted', JSON.stringify(sandboxCompleted));
+                    window.__jcmkecSessionStore.setItem('sandboxAdvCompleted', JSON.stringify(sandboxCompleted));
                     
                     paraExp += 30;
-                    localStorage.setItem('paraAdvExp', paraExp);
+                    window.__jcmkecSessionStore.setItem('paraAdvExp', paraExp);
                     document.getElementById('exp-display').innerText = paraExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -691,7 +698,7 @@
                     expAddedText = "，恭喜獲得 30 點經驗值！";
 
                     if (sandboxCompleted.length === 4) {
-                        localStorage.setItem('t_para_3', 'true');
+                        window.__jcmkecSessionStore.setItem('t_para_3', 'true');
                         showToast("恭喜你完成全部高級實用文範本，首頁已為你打卡過關！");
                         speakText("太厲害了！你已稱霸所有高級實用文格式！");
                     }
@@ -724,6 +731,9 @@
                 hintBox.innerHTML = hintStr;
                 hintBox.classList.remove('hidden');
 
+                const sandboxPad = document.getElementById('sandbox-layout-pad');
+                window.StudentFeedback?.wrong(sandboxPad, `排版順序尚未正確。請查看【${wrongSlotLabel}】的提示後再試一次。`);
+                setTimeout(() => window.StudentFeedback?.clear(sandboxPad), 1200);
                 renderSandboxBricks();
                 renderSandboxPad();
             }
@@ -794,7 +804,7 @@
             const qType = qData.category;
             const tutId = qType;
 
-            if (!forceStart && !localStorage.getItem('tut_seen_' + tutId)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + tutId)) {
                 pendingQuestionIdx = idx; 
                 showTutorial(tutId);      
                 return;                   
@@ -966,7 +976,7 @@
             } else if (reorderTarget.length === reorderCorrect.length) {
                 currentQuestionMistakes++;
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('paraAdvProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('paraAdvProgress', JSON.stringify(userProgress));
                 
                 let chunksToReturn = reorderTarget.splice(correctCount);
                 for (let chunk of chunksToReturn) {
@@ -990,7 +1000,11 @@
                 
                 const tArea = document.getElementById('reorder-target-area');
                 tArea.classList.add('bg-rose-100', 'border-rose-400', 'shake');
-                setTimeout(() => tArea.classList.remove('bg-rose-100', 'border-rose-400', 'shake'), 800);
+                window.StudentFeedback?.wrong(tArea, '順序尚未正確，已保留排對部分。請依提示調整下一項。');
+                setTimeout(() => {
+                    tArea.classList.remove('bg-rose-100', 'border-rose-400', 'shake');
+                    window.StudentFeedback?.clear(tArea);
+                }, 800);
 
                 renderReorderUI();
             }
@@ -1011,7 +1025,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('paraAdvProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('paraAdvProgress', JSON.stringify(userProgress));
                 
                 let lines = qData.explanation.split('<br>');
                 let matchedLine = lines.find(l => l.includes(clickedOptText));
@@ -1048,7 +1062,7 @@
 
             if (expGained > 0) {
                 paraExp += expGained;
-                localStorage.setItem('paraAdvExp', paraExp);
+                window.__jcmkecSessionStore.setItem('paraAdvExp', paraExp);
                 document.getElementById('exp-display').innerText = paraExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -1056,7 +1070,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentQuestionIdx] = finalStatus;
-                localStorage.setItem('paraAdvProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('paraAdvProgress', JSON.stringify(userProgress));
             }
 
             let modalIcon = finalStatus === 1 ? '🌟' : '✅';
@@ -1157,5 +1171,7 @@
             renderDirectory();
         }
     </script>
+    <script src="voice-manager.js"></script>
+    <script src="mobile-long-course-nav.js"></script>
 </body>
 </html>

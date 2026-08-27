@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>綜合寫作專區 - 拔尖思維特訓</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -46,6 +47,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden bg-grid-pattern">
 
@@ -194,7 +198,7 @@
 
     <script>
         // ================= 1. 全域變數定義 & 狀態庫 =================
-        let writeExp = parseInt(localStorage.getItem('writeAdvExp_v2')) || 0;
+        let writeExp = parseInt(window.__jcmkecSessionStore.getItem('writeAdvExp_v2')) || 0;
         let currentMode = 'vocab', currentIdx = -1, currentSubTask = 0, currentMistakes = 0;
         let reorderSource = [], targetSlots = [], reorderCorrect = [], lockedSlots = [], wrongSlots = []; 
         let vocabPhase = 1, selectedWordIdx = null, selectedMeanIdx = null, currentVocabSentIdx = 0;
@@ -265,7 +269,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + type, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + type, 'true');
         };
 
         window.closeTutorial = function() {
@@ -347,6 +351,8 @@
                 window.speakText("順序不太對喔！請看提示。");
                 currentMistakes++;
                 window.reRenderCurrentPlay();
+                requestAnimationFrame(() => document.querySelectorAll('.wrong-slot').forEach(slot => window.StudentFeedback?.markWrong(slot)));
+                window.StudentFeedback?.show(`有 ${wrongSlots.length} 個位置需要調整。請查看提示後再試一次。`, 'error');
                 
                 let hintTxt = "請再檢查一次邏輯順序喔！";
                 if(currentMode === 'outline') hintTxt = outlineData[currentIdx].hint;
@@ -368,6 +374,7 @@
                             targetSlots[idx] = null;
                         }
                     });
+                    document.querySelectorAll('.wrong-slot').forEach(slot => window.StudentFeedback?.clear(slot));
                     wrongSlots = [];
                     window.reRenderCurrentPlay();
                 }, 1500);
@@ -385,13 +392,14 @@
         };
 
         window.speakText = function(text, rate = 0.95) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let msg = new SpeechSynthesisUtterance(window.cleanTextForSpeech(text)); 
-                msg.lang = 'zh-HK'; 
-                msg.rate = rate; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         };
 
         window.showToast = function(message) {
@@ -449,7 +457,7 @@
             { title: "議論文：多聽少說", emoji: "🦴👂", slots: ["提出論點", "正面論據", "反面論證", "總結昇華"], chunks: ["善於傾聽比滔滔不絕更為重要，這是一種高情商的表現。", "蘇格拉底總是耐心聆聽學生的提問，從而引導他們發掘真理。", "總是搶著說話、不願傾聽的人，往往會錯失學習新知的機會並招人反感。", "我們應該學會做一個優秀的聆聽者，從別人的話語中汲取智慧。"], hint: "議論文遵循引論(論點)、本論（正、反）、結論的三部曲邏輯。", exp: "清晰的議論文大綱能保證論證嚴密，正反論據對比能讓說服力翻倍！" },
             { title: "說明文：低碳生活", emoji: "🦴🚲", slots: ["提出現象", "分析原因", "具體建議", "呼籲行動"], chunks: ["全球氣候變暖日益嚴重，極端天氣頻繁發生。", "這主要是由於人類大量燃燒化石燃料，排放了過多的溫室氣體。", "我們可以在日常生活中多乘搭公共交通工具，並減少浪費電力。", "只要每個人都踐行低碳生活，地球的未來一定會更加美好。"], hint: "說明文邏輯：是什麼現象 👉 為什麼會這樣 👉 該怎麼辦 👉 呼籲行動。", exp: "這是一個標準的「提出問題—分析問題—解決問題」結構。" },
             { title: "記敘文：珍貴的友誼", emoji: "🦴🤝", slots: ["交代背景", "發生誤會", "冰釋前嫌", "反思與昇華"], chunks: ["我和小明是同桌，平時形影不離，無話不談。", "有一次，我發現自己新買的鋼筆不見了，便懷疑是小明拿走，兩人因此大吵一架。", "後來我在書包角落找到了鋼筆，立刻羞愧地向小明道歉，他也大度地原諒了我。", "這次經歷讓我明白，真正的友誼建立在信任與包容之上，決不能隨意猜疑。"], hint: "記敘文要有起伏：背景 👉 發生衝突 👉 解決衝突 👉 領悟道理。", exp: "友誼中的「誤會與和好」是極佳的寫作題材，能深刻體現人物心理成長。" },
-            { title: "議論文：失敗的價值", emoji: "🦴🧗‍♂️", slots: ["提出論點", "正面論據", "反面論證", "總結昇華"], chunks: ["失敗並不可怕，它是通往成功必不可少的墊腳石。", "國父孫中山歷經十次革命失敗，始終不屈不撓，最終推翻了滿清政府。", "一遇到挫折就輕言放棄的人，永遠無法品嘗到勝利的果實。", "我們應勇敢擁抱失敗，從中吸取教訓，不斷邁向成功的巔峰。"], hint: "議論文遵循引論(論點)、本論（正、反）、結論的三部曲邏輯。", exp: "透過歷史名人的正面事蹟與懦弱者的反面表現，強烈對比出失敗的價值。" },
+            { title: "議論文：失敗的價值", emoji: "🦴🧗‍♂️", slots: ["提出論點", "正面論據", "反面論證", "總結昇華"], chunks: ["失敗並不可怕，它是通往成功必不可少的墊腳石。", "孫中山屢經挫折，仍堅持革命理想，為近代中國的變革作出重要貢獻。", "一遇到挫折就輕言放棄的人，永遠無法品嘗到勝利的果實。", "我們應勇敢擁抱失敗，從中吸取教訓，不斷邁向成功的巔峰。"], hint: "議論文遵循引論(論點)、本論（正、反）、結論的三部曲邏輯。", exp: "透過歷史名人的正面事蹟與懦弱者的反面表現，強烈對比出失敗的價值。" },
             { title: "說明文：保護視力", emoji: "🦴👁️", slots: ["提出現象", "分析原因", "說明後果", "具體建議"], chunks: ["近年來，本港小學生的近視率居高不下，情況令人擔憂。", "這與長時間近距離使用電子產品、缺乏戶外活動有密切關係。", "嚴重的近視不僅影響日常生活，還可能引發眼部疾病甚至失明。", "我們應遵循護眼法則，並多做戶外運動來保護靈魂之窗。"], hint: "說明文邏輯：是什麼現象 👉 為什麼會這樣 👉 有什麼後果 👉 該怎麼辦。", exp: "現象-原因-後果-對策，這是一個嚴絲合縫的邏輯說理鏈條。" },
             { title: "記敘文：一次挫折", emoji: "🦴🌧️", slots: ["交代背景", "發生挫折", "心境轉折", "獲得感悟"], chunks: ["為了這次鋼琴比賽，我每天練習好幾個小時，充滿自信。", "比賽時因為過度緊張，我彈錯了好幾個音符，最終沒有得獎。", "看著我難過的樣子，老師鼓勵我：「失敗只是暫時的，重要的是從中學習。」", "我擦乾眼淚，決定重新開始，因為我明白挫折能讓我變得更強大。"], hint: "從自信到失敗，再到受鼓勵後振作。", exp: "描寫心理的轉變過程是寫好挫折類記敘文的關鍵。" },
             { title: "議論文：合作的力量", emoji: "🦴🤝", slots: ["提出論點", "正面論據", "反面論證", "總結昇華"], chunks: ["團結合作是取得巨大成功的關鍵力量。", "螞蟻雖然微小，但牠們分工合作，卻能搬動比自己重幾十倍的食物。", "如果一個團隊裡每個人都只顧自己、互相猜忌，最終只會一事無成。", "我們在社會中必須學會與人合作，發揮「一加一大於二」的力量。"], hint: "論點 👉 動物合作的正面例子 👉 不合作的反面後果 👉 結論。", exp: "用螞蟻的例子非常生動地證明了合作的力量。" },
@@ -518,13 +526,13 @@
         const editData = [
             {
                 title: "病句與錯別字修正 (一)", emoji: "🩺📝",
-                badText: "今天雖然天氣睛朗，我和同學一起去圖書館溫習功課。在安靜的環境中，我們大聲地討論數學題，非常高興。",
+                badText: "因為今天天氣睛朗，我和同學一起去圖書館溫習功課。在安靜的環境中，我們大聲地討論數學題，非常高興。",
                 targets: [
                     { text: "睛朗", wrong: "睛朗", right: "晴朗", opts: ["晴朗", "清朗", "無須修改"], type: "typo", hint: "請注意『晴』與太陽(日字旁)有關，而不是眼睛。" },
-                    { text: "雖然", wrong: "雖然", right: "由於", opts: ["由於", "不但", "無須修改"], type: "logic", hint: "句子前後是因果關係，『雖然』是轉折詞，用在這裡不通順。" },
-                    { text: "大聲地討論", wrong: "大聲地討論", right: "小聲地討論", opts: ["小聲地討論", "熱烈地討論", "無須修改"], type: "behavior", hint: "圖書館是安靜的場所，不應該『大聲討論』喔！" }
+                    { text: "因為今天", wrong: "因為今天", right: "今天", opts: ["今天", "由於今天", "無須修改"], type: "logic", hint: "這裡只是在交代當天的天氣，不需要用因果關聯詞。" },
+                    { text: "大聲地討論", wrong: "大聲地討論", right: "低聲討論", opts: ["低聲討論", "熱烈地討論", "無須修改"], type: "behavior", hint: "圖書館是安靜的場所，討論時應使用較自然的「低聲討論」。" }
                 ],
-                exp: "修改後的段落：『今天由於天氣晴朗，我和同學一起去圖書館溫習功課。在安靜的環境中，我們小聲地討論數學題，非常高興。』"
+                exp: "修改後的段落：『今天天氣晴朗，我和同學一起去圖書館溫習功課。在安靜的環境中，我們低聲討論數學題，非常高興。』"
             },
             {
                 title: "病句與錯別字修正 (二)", emoji: "🩺🔍",
@@ -568,10 +576,10 @@
             },
             {
                 title: "病句與錯別字修正 (六)", emoji: "🩺🏥",
-                badText: "他生病了，咳嗽得很列害。醫生吩咐他要多休息，即使是吃藥，也不能很快痊瘉。他聽後感到十分優愁。",
+                badText: "他生病了，咳嗽得很列害。醫生吩咐他要多休息，即使是按時吃藥，也不能很快痊瘉。他聽後感到十分優愁。",
                 targets: [
                     { text: "列害", wrong: "列害", right: "厲害", opts: ["厲害", "歷害", "無須修改"], type: "typo", hint: "形容情況嚴重應該用『厲害』的『厲』(廠字頭)。" },
-                    { text: "即使是", wrong: "即使是", right: "只有按時", opts: ["只有按時", "只要", "無須修改"], type: "logic", hint: "醫生吩咐必須做的事，是治病的唯一條件，應用『只有...才』。" },
+                    { text: "即使是按時吃藥，也不能很快", wrong: "即使是按時吃藥，也不能很快", right: "只有按時吃藥，才能很快", opts: ["只有按時吃藥，才能很快", "只要按時吃藥，也能很快", "無須修改"], type: "logic", hint: "這裡要用「只有……才……」表達按時服藥是康復的必要條件。" },
                     { text: "優愁", wrong: "優愁", right: "憂愁", opts: ["憂愁", "幽愁", "無須修改"], type: "typo", hint: "心裡難過是『憂愁』(心字底)，優秀的優是人字旁。" }
                 ],
                 exp: "修改後的段落：『他生病了，咳嗽得很厲害。醫生吩咐他要多休息，只有按時吃藥，才能很快痊癒。他聽後感到十分憂愁。』"
@@ -600,7 +608,7 @@
                 title: "病句與錯別字修正 (九)", emoji: "🩺🗣️",
                 badText: "班長在台上大聲宣佈：明天學校舉辦慈善義賣活動。請大家永躍參加，為有需要的人出一番力氣。這真是一件有意義的事。",
                 targets: [
-                    { text: "宣佈：明天", wrong: "宣佈：明天", right: "宣佈：「明天", opts: ["宣佈：「明天", "宣佈；明", "無須修改"], type: "punc", hint: "說話內容如果被直接引用，冒號後面必須加上引號的開頭「。" },
+                    { text: "宣佈：明天學校舉辦慈善義賣活動。請大家永躍參加，為有需要的人出一番力氣。", wrong: "宣佈：明天學校舉辦慈善義賣活動。請大家永躍參加，為有需要的人出一番力氣。", right: "宣佈：「明天學校舉辦慈善義賣活動。請大家永躍參加，為有需要的人出一番力氣。」", opts: ["宣佈：「明天學校舉辦慈善義賣活動。請大家永躍參加，為有需要的人出一番力氣。」", "宣佈；明天學校舉辦慈善義賣活動。", "無須修改"], type: "punc", hint: "直接引用完整說話內容時，冒號後要有前引號，說話結束時也要有後引號。" },
                     { text: "永躍", wrong: "永躍", right: "踴躍", opts: ["踴躍", "勇躍", "無須修改"], type: "typo", hint: "形容積極參與是『踴躍』(足字旁)，不是永遠的永。" },
                     { text: "出一番力氣", wrong: "出一番力氣", right: "出一分力", opts: ["出一分力", "出一些力氣", "無須修改"], type: "logic", hint: "幫助別人通常說『出一分力』，『出一番力氣』多指體力勞動，用語不夠精煉。" }
                 ],
@@ -610,7 +618,7 @@
                 title: "病句與錯別字修正 (十)", emoji: "🩺🌟",
                 badText: "只要我們遇到困難，就不能輕易放棄。古人說：失敗乃成功之母，只要從中吸取教訓，總有一天會到達成功的目標。",
                 targets: [
-                    { text: "只要", wrong: "只要", right: "即使", opts: ["即使", "因為", "無須修改"], type: "logic", hint: "遇到困難是退一步的假設情況，應該用『即使...也(不能)』。" },
+                    { text: "只要我們遇到困難，就", wrong: "只要我們遇到困難，就", right: "即使我們遇到困難，也", opts: ["即使我們遇到困難，也", "因為我們遇到困難，所以", "無須修改"], type: "logic", hint: "這裡是讓步假設，應使用「即使……也不能……」的句式。" },
                     { text: "說：失敗乃成功之母，", wrong: "說：失敗乃成功之母，", right: "說：「失敗乃成功之母。」", opts: ["說：「失敗乃成功之母。」", "說，失", "無須修改"], type: "punc", hint: "引用名言必須用完整引號「」包圍起來。" },
                     { text: "到達", wrong: "到達", right: "達到", opts: ["達到", "抵達", "無須修改"], type: "logic", hint: "目的地用『到達』，抽象的目標應該配搭『達到』。" }
                 ],
@@ -618,7 +626,7 @@
             }
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('writeAdvProgress_v11')) || { vocab: new Array(vocabData.length).fill(0), analyze: new Array(analyzeData.length).fill(0), outline: new Array(outlineData.length).fill(0), trans: new Array(transData.length).fill(0), write: new Array(writeData.length).fill(0), edit: new Array(editData.length).fill(0) };
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('writeAdvProgress_v11')) || { vocab: new Array(vocabData.length).fill(0), analyze: new Array(analyzeData.length).fill(0), outline: new Array(outlineData.length).fill(0), trans: new Array(transData.length).fill(0), write: new Array(writeData.length).fill(0), edit: new Array(editData.length).fill(0) };
         
         window.updateTotalProgress = function() {
             let solved = 0;
@@ -635,7 +643,7 @@
             if (pb) pb.style.width = percent + '%';
         };
 
-        window.saveProgress = function() { localStorage.setItem('writeAdvProgress_v11', JSON.stringify(userProgress)); window.updateTotalProgress(); };
+        window.saveProgress = function() { window.__jcmkecSessionStore.setItem('writeAdvProgress_v11', JSON.stringify(userProgress)); window.updateTotalProgress(); };
 
         // ================= 4. 各功能模組之主目錄及挑戰 UI 渲染邏輯 =================
         window.renderVocabDirectory = function() {
@@ -649,7 +657,7 @@
         };
 
         window.startVocab = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_vocab')) { pendingIdx = idx; pendingType = 'vocab'; window.showTutorial('vocab'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_vocab')) { pendingIdx = idx; pendingType = 'vocab'; window.showTutorial('vocab'); return; }
             currentIdx = idx; currentMistakes = 0; vocabPhase = 1;
             let words = vocabData[idx].pairs.map((p, i) => ({ text: p.word, key: i })).sort(() => Math.random() - 0.5);
             let means = vocabData[idx].pairs.map((p, i) => ({ text: p.mean, key: i })).sort(() => Math.random() - 0.5);
@@ -691,10 +699,20 @@
                     document.getElementById('feedback-desc').classList.add('hidden'); document.getElementById('feedback-story').innerHTML = ""; document.getElementById('feedback-essay-container').classList.add('hidden');
                     window.showFeedbackModal(0, () => { vocabPhase = 2; currentVocabSentIdx = 0; window.renderVocabSentence(); }, "進入下一階段 ➡️");
                 } else { window.renderVocabMatching(words, means); }
-            } else {
+                        } else {
                 window.speakText("配對錯誤喔！"); currentMistakes++;
-                document.getElementById('vocab-hint-box').classList.remove('hidden'); document.getElementById('vocab-hint-box').innerText = "💡 提示：請重新閱讀成語意思，再做選擇。";
-                document.querySelectorAll('.bg-purple-200').forEach(b => { b.classList.add('bg-rose-100', 'shake'); setTimeout(() => b.classList.remove('bg-rose-100', 'shake', 'bg-purple-200'), 1000); });
+                document.getElementById('vocab-hint-box').classList.remove('hidden');
+                document.getElementById('vocab-hint-box').innerText = "💡 提示：請重新閱讀成語意思，再做選擇。";
+                const selectedButtons = [...document.querySelectorAll('.bg-purple-200')];
+                window.StudentFeedback?.wrong(selectedButtons[0], '這一組詞義配對不正確。請重新閱讀意思後再配對。');
+                selectedButtons.slice(1).forEach(button => window.StudentFeedback?.markWrong(button));
+                selectedButtons.forEach(button => {
+                    button.classList.add('bg-rose-100', 'shake');
+                    setTimeout(() => {
+                        button.classList.remove('bg-rose-100', 'shake', 'bg-purple-200');
+                        window.StudentFeedback?.clear(button);
+                    }, 1000);
+                });
                 selectedWordIdx = null; selectedMeanIdx = null;
             }
         };
@@ -728,16 +746,22 @@
                 btn.classList.add('bg-emerald-500', 'text-white', 'border-emerald-600'); window.speakText("答對了！" + pair.sent.replace('___', clickedWord));
                 setTimeout(() => { if (currentVocabSentIdx < data.pairs.length - 1) { currentVocabSentIdx++; window.renderVocabSentence(); } else { window.finishVocabLevel(); } }, 1000);
             } else {
-                btn.classList.add('bg-rose-500', 'text-white', 'border-rose-600', 'shake'); window.speakText("不太合適喔！"); currentMistakes++;
+                btn.classList.add('bg-rose-500', 'text-white', 'border-rose-600', 'shake');
+                window.StudentFeedback?.wrong(btn, '這個成語不太合適。請查看詞義提示後再試一次。');
+                window.speakText("不太合適喔！"); currentMistakes++;
                 let clickedPair = data.pairs.find(p => p.word === clickedWord);
                 document.getElementById('vocab-hint-box2').innerHTML = `💡 提示：「${clickedWord}」的意思是 ${clickedPair.mean}`; document.getElementById('vocab-hint-box2').classList.remove('hidden');
-                setTimeout(() => { btn.classList.remove('bg-rose-500', 'text-white', 'border-rose-600', 'shake'); document.querySelectorAll('#vocab-options-container .option-btn').forEach(b => { if (!b.classList.contains('bg-emerald-500')) b.style.pointerEvents = 'auto'; }); }, 1500);
+                setTimeout(() => {
+                    btn.classList.remove('bg-rose-500', 'text-white', 'border-rose-600', 'shake');
+                    window.StudentFeedback?.clear(btn);
+                    document.querySelectorAll('#vocab-options-container .option-btn').forEach(b => { if (!b.classList.contains('bg-emerald-500')) b.style.pointerEvents = 'auto'; });
+                }, 1500);
             }
         };
 
         window.finishVocabLevel = function() {
             const data = vocabData[currentIdx]; userProgress.vocab[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalHtml = `<div class="title">🔓 詞彙彈藥庫完全解鎖</div><div class="space-y-4 mt-4">${data.pairs.map(p => `<p class="text-left font-bold m-0 p-0 leading-loose" style="text-indent:0;"><span class="text-purple-600 text-2xl mr-2">【${p.word}】</span>：${p.mean}</p>`).join('')}</div>`;
             document.getElementById('feedback-exp-text').className = "text-purple-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').innerHTML = `💡 總結：${data.exp}`; document.getElementById('feedback-desc').className = "bg-purple-50 border border-purple-200 text-purple-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -757,7 +781,7 @@
         };
 
         window.startAnalyze = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_analyze')) { pendingIdx = idx; pendingType = 'analyze'; window.showTutorial('analyze'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_analyze')) { pendingIdx = idx; pendingType = 'analyze'; window.showTutorial('analyze'); return; }
             currentIdx = idx; currentMistakes = 0; const data = analyzeData[idx];
             document.getElementById('analyze-directory').style.display = 'none'; const playArea = document.getElementById('analyze-play'); playArea.style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             let combinedSentences = []; let sentences = data.text.split(/([。！？])/).filter(Boolean);
@@ -822,7 +846,7 @@
 
         window.finishAnalyzeLevel = function() {
             const data = analyzeData[currentIdx]; userProgress.analyze[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalStoryHtml = `<div class="title">${data.title}</div><p>${data.text.replace(/【.*?】/g, '').replace(/\[.*?\]/g, '')}</p>`;
             document.getElementById('feedback-exp-text').className = "text-blue-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-blue-50 border border-blue-200 text-blue-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${data.exp}`; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -843,7 +867,7 @@
         };
 
         window.startOutline = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_outline')) { pendingIdx = idx; pendingType = 'outline'; window.showTutorial('outline'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_outline')) { pendingIdx = idx; pendingType = 'outline'; window.showTutorial('outline'); return; }
             currentIdx = idx; currentMistakes = 0; const data = outlineData[idx]; window.initReorderState(data.chunks);
             document.getElementById('outline-directory').style.display = 'none'; document.getElementById('outline-play').style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             window.renderOutlineUI();
@@ -871,7 +895,7 @@
 
         window.advanceOutlinePhase = function() {
             const data = outlineData[currentIdx]; userProgress.outline[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalHtml = `<div class="title">${data.title} 寫作骨架</div><div class="space-y-3 mt-4 p-4">${reorderCorrect.map(p => `<p class="text-left font-bold text-slate-700 leading-loose m-0" style="text-indent:0;">${p.replace(/【.*?】/g, '')}</p>`).join('')}</div>`;
             document.getElementById('feedback-exp-text').className = "text-amber-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-amber-50 border border-amber-200 text-amber-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${data.exp}`; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -892,7 +916,7 @@
         };
 
         window.startTrans = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_trans')) { pendingIdx = idx; pendingType = 'trans'; window.showTutorial('trans'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_trans')) { pendingIdx = idx; pendingType = 'trans'; window.showTutorial('trans'); return; }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0; const stage = transData[idx].stages[0]; window.initReorderState(stage.chunks);
             document.getElementById('trans-directory').style.display = 'none'; document.getElementById('trans-play').style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             window.renderTransUI();
@@ -928,7 +952,7 @@
             const data = transData[currentIdx]; const stage = data.stages[currentSubTask];
             let finalStoryHtml = `<div class="title">${data.title}</div>`;
             if (stage.type.startsWith('para')) { finalStoryHtml += `<p>${reorderCorrect.join('')}</p>`; } else { finalStoryHtml += `<p>${stage.p1}</p><div class="trans-text text-amber-600">${reorderCorrect.map(c => `<span class="text-amber-600 font-bold">${c}</span>`).join('')}</div><p>${stage.p2}</p>`; }
-            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             document.getElementById('feedback-exp-text').className = "text-amber-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${expGained} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-amber-50 border border-amber-200 text-amber-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${stage.exp || stage.hint || '重組正確'}`; document.getElementById('feedback-desc').classList.remove('hidden');
             document.getElementById('feedback-story').innerHTML = finalStoryHtml; document.getElementById('feedback-essay-container').className = "flex flex-col shadow-md rounded-xl overflow-hidden border-2 border-amber-200 flex-shrink-0 w-full"; document.getElementById('feedback-essay-container').classList.remove('hidden');
@@ -954,7 +978,7 @@
         };
 
         window.startWrite = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_write')) { pendingIdx = idx; pendingType = 'write'; window.showTutorial('write'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_write')) { pendingIdx = idx; pendingType = 'write'; window.showTutorial('write'); return; }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0; const stage = writeData[idx].stages[0]; window.initReorderState(stage.chunks);
             document.getElementById('write-directory').style.display = 'none'; document.getElementById('write-play').style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             window.renderWriteUI();
@@ -988,7 +1012,7 @@
             const data = writeData[currentIdx]; const stage = data.stages[currentSubTask];
             let finalStoryHtml = `<div class="title">${data.title}</div>`;
             if (currentSubTask === 0 || currentSubTask === 1) { finalStoryHtml += `<p>${reorderCorrect.map(p => p.replace(/【.*?】/g, '').replace(/\[.*?\]/g, '')).join('')}</p>`; } else { reorderCorrect.forEach(p => { finalStoryHtml += `<p>${p.replace(/【.*?】/g, '').replace(/\[.*?\]/g, '')}</p>`; }); }
-            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             document.getElementById('feedback-exp-text').className = "text-purple-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${expGained} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-purple-50 border border-purple-200 text-purple-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${stage.exp || stage.hint || '重組正確'}`; document.getElementById('feedback-desc').classList.remove('hidden');
             document.getElementById('feedback-story').innerHTML = finalStoryHtml; document.getElementById('feedback-essay-container').className = "flex flex-col shadow-md rounded-xl overflow-hidden border-2 border-purple-200 flex-shrink-0 w-full"; document.getElementById('feedback-essay-container').classList.remove('hidden');
@@ -1012,7 +1036,7 @@
         };
 
         window.startEdit = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_edit')) { pendingIdx = idx; pendingType = 'edit'; window.showTutorial('edit'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_edit')) { pendingIdx = idx; pendingType = 'edit'; window.showTutorial('edit'); return; }
             currentIdx = idx; currentMistakes = 0; editCorrectCount = 0; const data = editData[idx];
             document.getElementById('edit-directory').style.display = 'none'; const playArea = document.getElementById('edit-play'); playArea.style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             let textHtml = data.badText; data.targets.forEach((t, tIdx) => { textHtml = textHtml.replace(t.wrong, `<span id="edit-target-${tIdx}" onclick="window.clickEditTarget(${tIdx})" class="bg-amber-100 border-b-2 border-dashed border-amber-500 px-1 py-0.5 cursor-pointer font-bold text-amber-950 hover:bg-amber-200 transition duration-200">${t.wrong}</span>`); });
@@ -1060,7 +1084,7 @@
 
         window.finishEditLevel = function() {
             const data = editData[currentIdx]; userProgress.edit[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalText = data.badText; data.targets.forEach(t => { if (t.right !== "無須修改") finalText = finalText.replace(t.wrong, t.right); });
             document.getElementById('feedback-exp-text').className = "text-purple-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-purple-50 border border-purple-200 text-purple-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${data.exp}`; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -1107,7 +1131,7 @@
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
             setTimeout(() => { window.speakFullStory(); }, 800);
             if (userProgress.vocab.filter(p=>p>0).length===vocabData.length && userProgress.analyze.filter(p=>p>0).length===analyzeData.length && userProgress.outline.filter(p=>p>0).length===outlineData.length && userProgress.trans.filter(p=>p>0).length===transData.length && userProgress.write.filter(p=>p>0).length===writeData.length && userProgress.edit.filter(p=>p>0).length===editData.length) {
-                localStorage.setItem('t_write_3', 'true');
+                window.__jcmkecSessionStore.setItem('t_write_3', 'true');
             }
         };
 
@@ -1116,5 +1140,7 @@
             window.switchMode('vocab'); 
         };
     </script>
+    <script src="voice-manager.js"></script>
+    <script src="mobile-long-course-nav.js"></script>
 </body>
 </html>

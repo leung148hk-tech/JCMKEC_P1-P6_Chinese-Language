@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>句子與語法 - 標準常規訓練</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -53,6 +54,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -130,7 +134,7 @@
 
     <script>
         // ================= 1. 核心狀態 =================
-        let sentStdExp = parseInt(localStorage.getItem('sentStandardExp')) || 0;
+        let sentStdExp = parseInt(window.__jcmkecSessionStore.getItem('sentStandardExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -152,14 +156,14 @@
         };
 
         window.speakText = function(text, rate = 0.9) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = window.cleanTextForSpeech(text);
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK';
-                msg.rate = rate; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         };
 
         window.showToast = function(message) {
@@ -248,7 +252,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         };
 
         window.closeTutorial = function() {
@@ -469,7 +473,7 @@
             }))
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('sentStdProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('sentStdProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         window.renderDirectory = function() {
             const dirContainer = document.getElementById('directory-content');
@@ -527,7 +531,7 @@
             const qData = rawQuestDataObj[idx];
             const qType = qData.category;
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + qType)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + qType)) {
                 pendingQuestionIdx = idx; 
                 window.showTutorial(qType);      
                 return;                   
@@ -672,7 +676,7 @@
                 window.speakText("放在這裡好像不太通順喔！");
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('sentStandardProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentStandardProgress', JSON.stringify(userProgress));
                 
                 setTimeout(() => {
                     btnElement.classList.remove('bg-rose-200', 'border-rose-400', 'text-rose-700', 'shake');
@@ -742,7 +746,7 @@
                 window.speakText("順序好像有點不對喔，再試試看！");
                 currentQuestionMistakes++;
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('sentStandardProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentStandardProgress', JSON.stringify(userProgress));
                 
                 const tArea = document.getElementById('reorder-target-area');
                 tArea.classList.add('bg-rose-100', 'border-rose-400', 'shake');
@@ -784,7 +788,7 @@
                 window.speakText("不對喔，請再想想看！");
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('sentStandardProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentStandardProgress', JSON.stringify(userProgress));
                 
                 setTimeout(() => {
                     btnElement.classList.remove('wrong', 'shake');
@@ -807,7 +811,7 @@
 
             if (expGained > 0) {
                 sentStdExp += expGained;
-                localStorage.setItem('sentStandardExp', sentStdExp);
+                window.__jcmkecSessionStore.setItem('sentStandardExp', sentStdExp);
                 document.getElementById('exp-display').innerText = sentStdExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -815,7 +819,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentQuestionIdx] = finalStatus;
-                localStorage.setItem('sentStandardProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentStandardProgress', JSON.stringify(userProgress));
             }
 
             let modalIcon = finalStatus === 1 ? '🌟' : '✅';
@@ -886,5 +890,7 @@
             document.getElementById('next-btn').onclick = window.goToNextQuestion;
         };
     </script>
+    <script src="voice-manager.js"></script>
+    <script src="mobile-long-course-nav.js"></script>
 </body>
 </html>

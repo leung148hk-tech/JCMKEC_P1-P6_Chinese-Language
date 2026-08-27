@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>閱讀理解 - 標準推論特訓</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -61,6 +62,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -219,7 +223,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音引擎 =================
-        let readExp = parseInt(localStorage.getItem('readStandardExp')) || 0;
+        let readExp = parseInt(window.__jcmkecSessionStore.getItem('readStandardExp')) || 0;
         document.getElementById('exp-display').innerText = readExp;
         
         let currentPassageIdx = -1;
@@ -241,19 +245,18 @@
         }
 
         function speakText(text, rate = 0.9) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = cleanTextForSpeech(text);
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK';
-                msg.rate = rate; 
-                window.currentUtterance = msg; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         function stopAllSpeechAndHighlights() {
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            if (window.LearningVoice) window.LearningVoice.stop(true);
             isReadingAll = false;
             document.querySelectorAll('.read-sentence').forEach(span => {
                 span.classList.remove('active-sentence');
@@ -283,47 +286,46 @@
                 stopAllSpeechAndHighlights();
                 return;
             }
-            
             document.querySelectorAll('.read-sentence').forEach(s => s.classList.remove('active-sentence'));
             let span = sentenceSpans[readingIndex];
             span.classList.add('active-sentence');
-            
             span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            let text = span.innerText;
-            let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-            msg.lang = 'zh-HK';
-            msg.rate = 0.9; 
-            window.currentUtterance = msg;
-            
-            msg.onend = function() {
-                if (isReadingAll) {
-                    readingIndex++;
-                    readNextSentence();
-                } else {
-                    stopAllSpeechAndHighlights();
-                }
-            };
-            
-            msg.onerror = function() { stopAllSpeechAndHighlights(); };
-            window.speechSynthesis.speak(msg);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                stopAllSpeechAndHighlights();
+                return;
+            }
+            const started = window.LearningVoice.speak(span.innerText, {
+                rate: 0.9,
+                label: '全文內容',
+                onEnd: function() {
+                    if (isReadingAll) {
+                        readingIndex++;
+                        readNextSentence();
+                    } else {
+                        stopAllSpeechAndHighlights();
+                    }
+                },
+                onError: stopAllSpeechAndHighlights
+            });
+            if (!started) stopAllSpeechAndHighlights();
         }
 
         function speakSpecificSentence(spanElement) {
             stopAllSpeechAndHighlights();
             spanElement.classList.add('active-sentence');
-            
-            let text = spanElement.innerText;
-            let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-            msg.lang = 'zh-HK';
-            msg.rate = 0.9;
-            window.currentUtterance = msg;
-            
-            msg.onend = function() {
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
                 spanElement.classList.remove('active-sentence');
-            };
-            
-            window.speechSynthesis.speak(msg);
+                return;
+            }
+            const started = window.LearningVoice.speak(spanElement.innerText, {
+                rate: 0.9,
+                label: '這一句',
+                onEnd: function() { spanElement.classList.remove('active-sentence'); },
+                onError: function() { spanElement.classList.remove('active-sentence'); }
+            });
+            if (!started) spanElement.classList.remove('active-sentence');
         }
 
         function parseAndWrapSentences(htmlString) {
@@ -405,7 +407,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -730,7 +732,7 @@
             }
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('readStandardProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('readStandardProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         function renderDirectory() {
             const dirContainer = document.getElementById('directory-content');
@@ -778,7 +780,7 @@
         function startPassage(idx, forceStart = false) {
             const passage = rawQuestDataObj[idx];
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + passage.tut)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + passage.tut)) {
                 currentPassageIdx = idx; 
                 showTutorial(passage.tut);
                 return;
@@ -852,7 +854,7 @@
                 else readExp += 5;
 
                 document.getElementById('exp-display').innerText = readExp;
-                localStorage.setItem('readStandardExp', readExp);
+                window.__jcmkecSessionStore.setItem('readStandardExp', readExp);
 
                 document.getElementById('feedback-desc').innerHTML = `<span class="bg-indigo-50 p-4 rounded-xl block border border-indigo-100 text-indigo-900">${qData.exp}</span>`;
                 
@@ -928,7 +930,7 @@
 
             if (expGained > 0) {
                 readExp += expGained;
-                localStorage.setItem('readStandardExp', readExp);
+                window.__jcmkecSessionStore.setItem('readStandardExp', readExp);
                 document.getElementById('exp-display').innerText = readExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -936,7 +938,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentPassageIdx] = finalStatus;
-                localStorage.setItem('readStandardProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('readStandardProgress', JSON.stringify(userProgress));
             }
 
             let expMsg = expGained > 0 
@@ -955,7 +957,7 @@
             }, 10);
             
             if(userProgress.filter(p => p > 0).length === rawQuestDataObj.length) {
-                localStorage.setItem('t_read_2', 'true');
+                window.__jcmkecSessionStore.setItem('t_read_2', 'true');
             }
         }
 
@@ -984,5 +986,7 @@
             renderDirectory();
         }
     </script>
+    <script src="voice-manager.js"></script>
+    <script src="mobile-long-course-nav.js"></script>
 </body>
 </html>

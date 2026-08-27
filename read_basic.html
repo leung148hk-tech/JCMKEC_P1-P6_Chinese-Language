@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>閱讀理解 - 基礎拆段訓練</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -59,6 +60,9 @@
         .toast-msg.show { visibility: visible; animation: slideUp 0.5s, fadeOut 0.5s 2.5s; }
         @keyframes fadeOut { from {opacity: 1;} to {opacity: 0;} }
     </style>
+    <script src="diagnostics.js"></script>
+    <script src="student-feedback.js"></script>
+    <link rel="stylesheet" href="mobile-accessibility.css">
 </head>
 <body class="text-slate-800 flex flex-col h-[100dvh] overflow-hidden">
 
@@ -97,7 +101,11 @@
                     </div>
                 </div>
 
-                <div id="directory-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="sticky top-2 z-10 mb-5 bg-white/95 backdrop-blur border-2 border-sky-200 rounded-2xl p-3 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <p id="read-quick-next-label" role="status" class="text-sm md:text-base font-black text-slate-700">正在整理你的閱讀進度…</p>
+                    <button id="read-continue-btn" type="button" onclick="continueReading()" class="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-black px-5 py-3 rounded-xl shadow border-b-4 border-sky-800 active:border-b-0 active:translate-y-1 transition">▶️ 繼續閱讀</button>
+                </div>
+                <div id="directory-content" class="flex flex-col gap-4">
                     <!-- 目錄動態生成 -->
                 </div>
             </div>
@@ -194,7 +202,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音引擎 =================
-        let readExp = parseInt(localStorage.getItem('readBasicExp')) || 0;
+        let readExp = parseInt(window.__jcmkecSessionStore.getItem('readBasicExp')) || 0;
         document.getElementById('exp-display').innerText = readExp;
         
         let currentPassageIdx = -1;
@@ -219,19 +227,18 @@
         }
 
         function speakText(text, rate = 0.9) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let cleanText = cleanTextForSpeech(text);
-                let msg = new SpeechSynthesisUtterance(cleanText);
-                msg.lang = 'zh-HK';
-                msg.rate = rate; 
-                window.currentUtterance = msg; 
-                window.speechSynthesis.speak(msg);
+            const preparedText = typeof window.cleanTextForSpeech === 'function'
+                ? window.cleanTextForSpeech(text)
+                : (typeof cleanTextForSpeech === 'function' ? cleanTextForSpeech(text) : text);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                return false;
             }
+            return window.LearningVoice.toggle(preparedText, { rate, label: '內容' });
         }
 
         function stopAllSpeechAndHighlights() {
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            if (window.LearningVoice) window.LearningVoice.stop(true);
             isReadingAll = false;
             document.querySelectorAll('.read-sentence').forEach(span => {
                 span.classList.remove('active-sentence');
@@ -261,47 +268,46 @@
                 stopAllSpeechAndHighlights();
                 return;
             }
-            
             document.querySelectorAll('.read-sentence').forEach(s => s.classList.remove('active-sentence'));
             let span = sentenceSpans[readingIndex];
             span.classList.add('active-sentence');
-            
             span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            let text = span.innerText;
-            let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-            msg.lang = 'zh-HK';
-            msg.rate = 0.85; 
-            window.currentUtterance = msg;
-            
-            msg.onend = function() {
-                if (isReadingAll) {
-                    readingIndex++;
-                    readNextSentence();
-                } else {
-                    stopAllSpeechAndHighlights();
-                }
-            };
-            
-            msg.onerror = function() { stopAllSpeechAndHighlights(); };
-            window.speechSynthesis.speak(msg);
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
+                stopAllSpeechAndHighlights();
+                return;
+            }
+            const started = window.LearningVoice.speak(span.innerText, {
+                rate: 0.85,
+                label: '全文內容',
+                onEnd: function() {
+                    if (isReadingAll) {
+                        readingIndex++;
+                        readNextSentence();
+                    } else {
+                        stopAllSpeechAndHighlights();
+                    }
+                },
+                onError: stopAllSpeechAndHighlights
+            });
+            if (!started) stopAllSpeechAndHighlights();
         }
 
         function speakSpecificSentence(spanElement) {
             stopAllSpeechAndHighlights();
             spanElement.classList.add('active-sentence');
-            
-            let text = spanElement.innerText;
-            let msg = new SpeechSynthesisUtterance(cleanTextForSpeech(text));
-            msg.lang = 'zh-HK';
-            msg.rate = 0.85;
-            window.currentUtterance = msg;
-            
-            msg.onend = function() {
+            if (!window.LearningVoice) {
+                if (typeof showToast === 'function') showToast('朗讀功能正在準備，請稍後再試。');
                 spanElement.classList.remove('active-sentence');
-            };
-            
-            window.speechSynthesis.speak(msg);
+                return;
+            }
+            const started = window.LearningVoice.speak(spanElement.innerText, {
+                rate: 0.85,
+                label: '這一句',
+                onEnd: function() { spanElement.classList.remove('active-sentence'); },
+                onError: function() { spanElement.classList.remove('active-sentence'); }
+            });
+            if (!started) spanElement.classList.remove('active-sentence');
         }
 
         function parseAndWrapSentences(htmlString) {
@@ -378,7 +384,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[tutKey];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -491,7 +497,7 @@
                     { type: '直接提取', q: '「我」從冰箱拿了幾個雞蛋？', options: ['一個', '兩個', '三個', '四個'], ans: 1, hint: '第一段寫拿了「多少個」雞蛋？', exp: '文章提到：「我先從冰箱拿出兩個雞蛋」。' },
                     { type: '字詞積累', q: '第二段中，「小心翼翼」的近義詞是什麼？', options: ['非常害怕', '十分隨便', '十分謹慎小心', '動作很快'], ans: 2, hint: '煎蛋時怕油彈到，動作會是很小心的。', exp: '「小心翼翼」形容舉動十分謹慎，絲毫不敢疏忽。' },
                     { type: '標點符號', q: '文章中「滋滋」加了引號「」，這是因為？', options: ['這是一個人的名字', '用來標示聲音的詞語', '這是一本書的名字', '表示這句話很重要'], ans: 1, hint: '「滋滋」是煎蛋發出的聲音。', exp: '引號在這裡用來標示擬聲詞（聲音）。' },
-                    { type: '字詞積累', q: '第三段中，「滿足」的反義詞是什麼？', options: ['開心', '失望', '飽肚', '疲倦'], ans: 1, hint: '覺得足夠、滿意了，相反就是覺得不夠、不滿意。', exp: '「滿足」的相反詞是「失望」或「不滿」。' },
+                    { type: '字詞積累', q: '第三段中，「滿足」的反義詞是什麼？', options: ['開心', '失望', '飽肚', '疲倦'], ans: 1, hint: '覺得足夠、滿意了，相反就是覺得不夠、不滿意。', exp: '「滿足」的相反詞是「不滿」。' },
                     { type: '自然段落', q: '這篇文章按什麼順序來分段的？', options: ['按天氣變化', '按煎蛋的步驟（準備、煎蛋、吃蛋）', '按不同的人物', '按不同的地點'], ans: 1, hint: '第一段準備，第二段開火煎，第三段吃。', exp: '文章清晰地按照事情發生的先後步驟來分段。' }
                 ]
             },
@@ -514,7 +520,7 @@
                     { type: '字詞積累', q: '第一段中，用來量度「翅膀」的量詞是什麼？', options: ['一隻', '一張', '一對', '一塊'], ans: 2, hint: '翅膀有左右兩邊，看看文章用了什麼量詞。', exp: '文章寫道：「還有一對透明的翅膀。」' },
                     { type: '句式結構', q: '為什麼蜜蜂要互相幫助、非常團結？', options: ['因為牠們怕黑', '因為一隻蜜蜂的力量很小', '因為花蜜太重了', '因為蜂后強迫牠們'], ans: 1, hint: '在第二段找「因為...所以...」的原因。', exp: '文章寫道：「因為一隻蜜蜂的力量很小，所以牠們會互相幫助」。' },
                     { type: '字詞積累', q: '「勤勞」的反義詞是什麼？', options: ['努力', '懶惰', '生氣', '聰明'], ans: 1, hint: '每天工作不休息是勤勞，相反就是什麼都不做。', exp: '「勤勞」的相反詞是「懶惰」。' },
-                    { type: '自然段落', q: '這篇文章的第二段主要說明蜜蜂的什麼優點？', options: ['飛得很快', '顏色很漂亮', '非常團結和互相幫助', '會針人'], ans: 2, hint: '第二段第一句話是中心句。', exp: '第二段開頭寫「蜜蜂非常團結」，接下來都是解釋牠們如何合作。' }
+                    { type: '自然段落', q: '這篇文章的第二段主要說明蜜蜂的什麼優點？', options: ['飛得很快', '顏色很漂亮', '非常團結和互相幫助', '會螫人'], ans: 2, hint: '第二段第一句話是中心句。', exp: '第二段開頭寫「蜜蜂非常團結」，接下來都是解釋牠們如何合作。' }
                 ]
             },
             {
@@ -599,7 +605,7 @@
                 text: '<p class="diary-date">十一月十二日 星期四 晴</p><p>今天是一年一度的校運會。操場上人山人海，非常熱鬧。我參加了六十米短跑比賽。聽到槍聲，我立刻向前衝，同學們都在大聲為我加油。</p><p>因為我跑得不夠快，所以只得了第三名。雖然拿到的是銅牌，但我已經盡了最大的努力，心裡依然很高興。</p>',
                 questions: [
                     { type: '直接提取', q: '這篇日記記錄的是哪一天的活動？', options: ['十月十二日', '十一月十二日', '星期五', '星期三'], ans: 1, hint: '看日記第一行的日期。', exp: '日記開頭寫著：「十一月十二日 星期四 晴」' },
-                    { type: '字詞積累', q: '第一段正文中，「熱鬧」的近義詞是什麼？', options: ['冷清', '喧鬧/沸騰', '安靜', '恐怖'], ans: 1, hint: '人很多聲音很多，氣氛很熱烈。', exp: '「熱鬧」的近義詞是「喧鬧」或「繁華」。' },
+                    { type: '字詞積累', q: '第一段正文中，「熱鬧」的近義詞是什麼？', options: ['冷清', '喧鬧', '安靜', '恐怖'], ans: 1, hint: '人很多聲音很多，氣氛很熱烈。', exp: '「熱鬧」的近義詞是「喧鬧」或「繁華」。' },
                     { type: '直接提取', q: '作者參加了什麼比賽項目？', options: ['跳高', '跳遠', '六十米短跑', '接力賽'], ans: 2, hint: '作者說「我參加了...」什麼比賽？', exp: '文章明確寫出：「我參加了六十米短跑比賽。」' },
                     { type: '句式結構', q: '為什麼作者只得了第三名？', options: ['因為他跌倒了', '因為他跑得不夠快', '因為別人犯規', '因為他不想贏'], ans: 1, hint: '第二段正文開頭的「因為...所以...」。', exp: '文章寫道：「因為我跑得不夠快，所以只得了第三名。」' },
                     { type: '初步推論', q: '雖然只得第三名，但作者心裡很高興，這是為什麼？', options: ['因為有獎品', '因為不用上課', '因為他覺得自己已經盡了最大的努力', '因為同學幫他跑'], ans: 2, hint: '看看最後一句話的轉折。', exp: '文章最後說：「但我已經盡了最大的努力，心裡依然很高興。」' }
@@ -634,7 +640,7 @@
                     { type: '直接提取', q: '變色龍最厲害的本領是什麼？', options: ['跑得很快', '改變身體的顏色', '跳得很高', '會飛'], ans: 1, hint: '找找看第一段「最厲害的本領」後面的字眼。', exp: '文章明確指出：「最厲害的本領就是改變身體的顏色。」' },
                     { type: '直接提取', q: '當變色龍走到樹幹上，身體會變成什麼顏色？', options: ['綠色', '紅色', '褐色', '藍色'], ans: 2, hint: '看看走到樹幹上會變什麼顏色。', exp: '文章說：「當牠走到樹幹上，就會變成褐色。」' },
                     { type: '句式結構', q: '變色龍為什麼要改變身體的顏色來隱藏自己？', options: ['為了好看', '為了避開敵人追捕及方便捕捉昆蟲', '為了睡覺不被吵醒', '為了保暖'], ans: 1, hint: '第二段的「因為...所以...」。', exp: '文章解釋：「因為這樣可以隱藏自己，所以牠們能避開敵人的追捕，也方便捕捉昆蟲。」' },
-                    { type: '字詞積累', q: '第三段中，「大師」前面的量詞應該用什麼最合適？', options: ['一個 / 一位', '一隻', '一條', '一塊'], ans: 0, hint: '大師是形容很厲害的專家，通常當作人來稱呼。', exp: '尊稱專家或大師，通常用量詞「位」或「個」。' },
+                    { type: '字詞積累', q: '第三段中，「大師」前面的量詞應該用什麼最合適？', options: ['一位', '一隻', '一條', '一塊'], ans: 0, hint: '大師是形容很厲害的專家，通常當作人來稱呼。', exp: '尊稱專家或大師，通常用量詞「位」或「個」。' },
                     { type: '自然段落', q: '文章最後一段給了變色龍一個什麼特別的稱號？', options: ['跑步大師', '隱身大師', '捕蟲大師', '魔術師'], ans: 1, hint: '看看文章最後一句話。', exp: '文章總結：「變色龍真像是自然界的隱身大師。」' }
                 ]
             },
@@ -662,38 +668,111 @@
             }
         ];
 
-        // 載入進度
-        let userProgress = JSON.parse(localStorage.getItem('readBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        // 載入進度與手機續學／章節收合狀態
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('readBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let readChapterOpenState = JSON.parse(window.__jcmkecSessionStore.getItem('readBasicChapterOpenState') || '{}');
+
+        function getReadingResumeIdx() {
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem('readBasicLastPassageIdx'));
+            if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < rawQuestDataObj.length && userProgress[lastIdx] === 0) return lastIdx;
+            return userProgress.findIndex(status => status === 0);
+        }
+
+        function getReadingChapterForIdx(idx) {
+            return idx >= 0 && rawQuestDataObj[idx] ? rawQuestDataObj[idx].category : null;
+        }
+
+        function isReadingChapterOpen(category) {
+            if (typeof readChapterOpenState[category] === 'boolean') return readChapterOpenState[category];
+            return category === getReadingChapterForIdx(getReadingResumeIdx());
+        }
+
+        function toggleReadingChapter(category) {
+            readChapterOpenState[category] = !isReadingChapterOpen(category);
+            window.__jcmkecSessionStore.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
+            renderDirectory();
+            requestAnimationFrame(() => document.getElementById(`read-chapter-${category}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        }
+
+        function continueReading() {
+            const idx = getReadingResumeIdx();
+            if (idx === -1) {
+                showToast('太棒了！所有文章已完成。');
+                return;
+            }
+            const category = getReadingChapterForIdx(idx);
+            if (category) {
+                readChapterOpenState[category] = true;
+                window.__jcmkecSessionStore.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
+            }
+            startPassage(idx);
+        }
+
+        function updateReadingQuickNav() {
+            const label = document.getElementById('read-quick-next-label');
+            const button = document.getElementById('read-continue-btn');
+            if (!label || !button) return;
+            const solved = userProgress.filter(status => status === 1 || status === 2).length;
+            const idx = getReadingResumeIdx();
+            if (idx === -1) {
+                label.textContent = `🎉 已完成 ${solved} / ${rawQuestDataObj.length} 篇文章！`;
+                button.textContent = '🏆 全部文章已完成';
+                button.disabled = true;
+                button.className = 'w-full sm:w-auto bg-slate-200 text-slate-500 font-black px-5 py-3 rounded-xl cursor-not-allowed';
+                return;
+            }
+            label.textContent = `目前完成 ${solved} / ${rawQuestDataObj.length} 篇 · 下一篇：${rawQuestDataObj[idx].title}`;
+            button.textContent = `▶️ 繼續「${rawQuestDataObj[idx].title}」`;
+            button.disabled = false;
+            button.className = 'w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-black px-5 py-3 rounded-xl shadow border-b-4 border-sky-800 active:border-b-0 active:translate-y-1 transition';
+        }
 
         function renderDirectory() {
             const dirContainer = document.getElementById('directory-content');
             let html = '';
-            rawQuestDataObj.forEach((passage, idx) => {
-                let status = userProgress[idx];
-                let bgClass = 'bg-white';
-                let borderClass = 'border-slate-200';
-                let icon = ' <span class="text-slate-400 font-bold ml-2"># 未挑戰</span>';
-                
-                if (status === 1) {
-                    bgClass = 'bg-yellow-50'; borderClass = 'border-yellow-400';
-                    icon = ' <span class="text-yellow-600 font-bold ml-2">🌟 完美</span>';
-                } else if (status === 2) {
-                    bgClass = 'bg-emerald-50'; borderClass = 'border-emerald-400';
-                    icon = ' <span class="text-emerald-600 font-bold ml-2">✅ 過關</span>';
-                }
-
+            const categories = [...new Set(rawQuestDataObj.map(passage => passage.category))];
+            categories.forEach(category => {
+                const passages = rawQuestDataObj.map((passage, idx) => ({ passage, idx })).filter(item => item.passage.category === category);
+                const completed = passages.filter(item => userProgress[item.idx] === 1 || userProgress[item.idx] === 2).length;
+                const isOpen = isReadingChapterOpen(category);
                 html += `
-                    <button onclick="startPassage(${idx})" class="w-full text-left p-4 rounded-2xl border-2 ${borderClass} ${bgClass} hover:shadow-md transition group active:scale-95">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="bg-sky-100 text-sky-800 text-xs font-bold px-2 py-1 rounded">${passage.category}</span>
-                            ${icon}
+                    <section id="read-chapter-${category}" class="scroll-mt-3 bg-slate-50/70 border border-slate-200 rounded-2xl p-4 md:p-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${isOpen ? 'border-b-2 border-sky-100 pb-3 mb-3' : ''}">
+                            <div>
+                                <h3 class="text-xl font-black text-sky-800">${category}</h3>
+                                <p class="text-sm font-bold text-slate-500 mt-1">本章進度：${completed} / ${passages.length} 篇</p>
+                            </div>
+                            <button type="button" onclick="toggleReadingChapter('${category}')" aria-expanded="${isOpen}" aria-controls="read-chapter-grid-${category}" class="w-full sm:w-auto bg-white text-slate-700 px-4 py-2 rounded-lg text-sm font-black shadow-sm border border-slate-300 hover:bg-slate-100 transition active:scale-95">${isOpen ? '收合本章 ⌃' : '展開文章 ⌄'}</button>
                         </div>
-                        <h3 class="text-lg font-black text-slate-800 group-hover:text-sky-600 transition">${passage.title}</h3>
-                        <p class="text-sm text-slate-500 mt-1">共 ${passage.questions.length} 題小挑戰</p>
-                    </button>
+                        <div id="read-chapter-grid-${category}" class="${isOpen ? 'grid' : 'hidden'} grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 `;
+                passages.forEach(({ passage, idx }) => {
+                    let status = userProgress[idx];
+                    let bgClass = 'bg-white';
+                    let borderClass = 'border-slate-200';
+                    let icon = ' <span class="text-slate-400 font-bold ml-2"># 未挑戰</span>';
+                    if (status === 1) {
+                        bgClass = 'bg-yellow-50'; borderClass = 'border-yellow-400';
+                        icon = ' <span class="text-yellow-600 font-bold ml-2">🌟 完美</span>';
+                    } else if (status === 2) {
+                        bgClass = 'bg-emerald-50'; borderClass = 'border-emerald-400';
+                        icon = ' <span class="text-emerald-600 font-bold ml-2">✅ 過關</span>';
+                    }
+                    html += `
+                        <button onclick="startPassage(${idx})" class="w-full text-left p-4 rounded-2xl border-2 ${borderClass} ${bgClass} hover:shadow-md transition group active:scale-95">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="bg-sky-100 text-sky-800 text-xs font-bold px-2 py-1 rounded">${passage.category}</span>
+                                ${icon}
+                            </div>
+                            <h4 class="text-lg font-black text-slate-800 group-hover:text-sky-600 transition">${passage.title}</h4>
+                            <p class="text-sm text-slate-500 mt-1">共 ${passage.questions.length} 題小挑戰</p>
+                        </button>
+                    `;
+                });
+                html += '</div></section>';
             });
             dirContainer.innerHTML = html;
+            updateReadingQuickNav();
             updateTotalProgress();
         }
 
@@ -712,13 +791,14 @@
             const passage = rawQuestDataObj[idx];
             
             // 🌟 教學攔截
-            if (!forceStart && !localStorage.getItem('tut_seen_' + passage.tut)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + passage.tut)) {
                 currentPassageIdx = idx; // 記住要進哪一篇
                 showTutorial(passage.tut);
                 return;
             }
 
             currentPassageIdx = idx;
+            window.__jcmkecSessionStore.setItem('readBasicLastPassageIdx', String(idx));
             currentQuestionIdx = 0; // 從第一題開始
             currentPassageMistakes = 0;
             
@@ -793,7 +873,7 @@
                 else readExp += 2;
 
                 document.getElementById('exp-display').innerText = readExp;
-                localStorage.setItem('readBasicExp', readExp);
+                window.__jcmkecSessionStore.setItem('readBasicExp', readExp);
 
                 // 顯示單題回饋
                 document.getElementById('feedback-desc').innerHTML = `<span class="bg-sky-50 p-4 rounded-xl block border border-sky-100 text-sky-900">${qData.exp}</span>`;
@@ -873,7 +953,7 @@
 
             if (expGained > 0) {
                 readExp += expGained;
-                localStorage.setItem('readBasicExp', readExp);
+                window.__jcmkecSessionStore.setItem('readBasicExp', readExp);
                 document.getElementById('exp-display').innerText = readExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -881,7 +961,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentPassageIdx] = finalStatus;
-                localStorage.setItem('readBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('readBasicProgress', JSON.stringify(userProgress));
             }
 
             let expMsg = expGained > 0 
@@ -901,7 +981,7 @@
             
             // 首頁連動
             if(userProgress.filter(p => p > 0).length === rawQuestDataObj.length) {
-                localStorage.setItem('t_read_1', 'true');
+                window.__jcmkecSessionStore.setItem('t_read_1', 'true');
             }
         }
 
@@ -909,7 +989,13 @@
             stopAllSpeechAndHighlights();
             document.getElementById('quest-play').style.display = 'none';
             document.getElementById('quest-directory').style.display = 'block';
+            const category = getReadingChapterForIdx(currentPassageIdx);
+            if (category) {
+                readChapterOpenState[category] = true;
+                window.__jcmkecSessionStore.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
+            }
             renderDirectory();
+            requestAnimationFrame(() => document.getElementById(`read-chapter-${category}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         }
 
         function backToDirectoryFromFinish() {
@@ -928,5 +1014,6 @@
             renderDirectory();
         }
     </script>
+    <script src="voice-manager.js"></script>
 </body>
 </html>
