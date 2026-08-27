@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聆聽與說話 - 基礎六要素訓練</title>
@@ -158,7 +159,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let listenExp = parseInt(localStorage.getItem('listenBasicExp')) || 0;
+        let listenExp = parseInt(window.__jcmkecSessionStore.getItem('listenBasicExp')) || 0;
         document.getElementById('exp-display').innerText = listenExp;
         
         let currentMode = 'listen'; 
@@ -180,7 +181,7 @@
             const preferredLanguages = ['yue-Hant-HK', 'yue-HK', 'zh-HK', 'zh-TW', 'zh-CN', 'zh'];
             let voices = [];
             let activeUtterance = null;
-            let rate = Number(localStorage.getItem(rateKey)) || 0.85;
+            let rate = Number(window.__jcmkecSessionStore.getItem(rateKey)) || 0.85;
 
             function isSupported() {
                 return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
@@ -232,7 +233,7 @@
 
             function setRate(nextRate) {
                 rate = Number(nextRate);
-                localStorage.setItem(rateKey, String(rate));
+                window.__jcmkecSessionStore.setItem(rateKey, String(rate));
                 updateRateButtons();
                 announce(`朗讀速度已設為 ${rate} 倍。`, 'neutral');
             }
@@ -441,7 +442,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -609,11 +610,11 @@
             }
         ];
 
-        let listenProgress = JSON.parse(localStorage.getItem('listenBasicProgress')) || new Array(listenData.length).fill(0);
-        let listenIncompleteOnly = localStorage.getItem('listenBasicIncompleteOnly') === 'true';
+        let listenProgress = JSON.parse(window.__jcmkecSessionStore.getItem('listenBasicProgress')) || new Array(listenData.length).fill(0);
+        let listenIncompleteOnly = window.__jcmkecSessionStore.getItem('listenBasicIncompleteOnly') === 'true';
 
         function getListenResumeIdx() {
-            const lastIdx = Number(localStorage.getItem('listenBasicLastTaskIdx'));
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem('listenBasicLastTaskIdx'));
             if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < listenData.length && listenProgress[lastIdx] !== 1) return lastIdx;
             return listenProgress.findIndex(status => status !== 1);
         }
@@ -635,7 +636,7 @@
 
         function toggleListenIncompleteFilter() {
             listenIncompleteOnly = !listenIncompleteOnly;
-            localStorage.setItem('listenBasicIncompleteOnly', String(listenIncompleteOnly));
+            window.__jcmkecSessionStore.setItem('listenBasicIncompleteOnly', String(listenIncompleteOnly));
             renderListenDirectory();
         }
 
@@ -674,14 +675,14 @@
         }
 
         function startListen(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-six')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-six')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'listen';
                 showTutorial('t-six');
                 return;
             }
             currentStoryIdx = idx;
-            localStorage.setItem('listenBasicLastTaskIdx', String(idx));
+            window.__jcmkecSessionStore.setItem('listenBasicLastTaskIdx', String(idx));
             currentQuestionIdx = 0;
             document.getElementById('listen-directory').style.display = 'none';
             const playArea = document.getElementById('listen-play');
@@ -767,10 +768,10 @@
                     } else {
                         if (listenProgress[currentStoryIdx] !== 1) {
                             listenExp += 30;
-                            localStorage.setItem('listenBasicExp', listenExp);
+                            window.__jcmkecSessionStore.setItem('listenBasicExp', listenExp);
                             document.getElementById('exp-display').innerText = listenExp;
                             listenProgress[currentStoryIdx] = 1;
-                            localStorage.setItem('listenBasicProgress', JSON.stringify(listenProgress));
+                            window.__jcmkecSessionStore.setItem('listenBasicProgress', JSON.stringify(listenProgress));
                         }
                         
                         document.getElementById('feedback-desc').innerText = "你成功抓出了故事的六大要素！獲得 30 EXP！";
@@ -817,11 +818,11 @@
             { e: '🛒👩👦', t: '超級市場', hint: ['時間', '人物', '地點', '起因 (為什麼去？)', '經過 (買了什麼？)', '結果 (最後怎樣？)'], sample: '週末早上，我和媽媽在超級市場裡。因為家裡沒有水果了，我們推著購物車去選購。我們買了蘋果、橙子和新鮮的蔬菜。最後，我們付了錢，提著滿滿的袋子開心地回家。' }
         ];
 
-        let speakProgress = JSON.parse(localStorage.getItem('speakBasicProgress')) || new Array(speakData.length).fill(0);
-        let speakIncompleteOnly = localStorage.getItem('speakBasicIncompleteOnly') === 'true';
+        let speakProgress = JSON.parse(window.__jcmkecSessionStore.getItem('speakBasicProgress')) || new Array(speakData.length).fill(0);
+        let speakIncompleteOnly = window.__jcmkecSessionStore.getItem('speakBasicIncompleteOnly') === 'true';
 
         function getSpeakResumeIdx() {
-            const lastIdx = Number(localStorage.getItem('speakBasicLastTaskIdx'));
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem('speakBasicLastTaskIdx'));
             if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < speakData.length && speakProgress[lastIdx] !== 1) return lastIdx;
             return speakProgress.findIndex(status => status !== 1);
         }
@@ -843,7 +844,7 @@
 
         function toggleSpeakIncompleteFilter() {
             speakIncompleteOnly = !speakIncompleteOnly;
-            localStorage.setItem('speakBasicIncompleteOnly', String(speakIncompleteOnly));
+            window.__jcmkecSessionStore.setItem('speakBasicIncompleteOnly', String(speakIncompleteOnly));
             renderSpeakDirectory();
         }
 
@@ -877,14 +878,14 @@
         }
 
         function startSpeak(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-speak')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-speak')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'speak';
                 showTutorial('t-speak');
                 return;
             }
             currentStoryIdx = idx;
-            localStorage.setItem('speakBasicLastTaskIdx', String(idx));
+            window.__jcmkecSessionStore.setItem('speakBasicLastTaskIdx', String(idx));
             document.getElementById('speak-directory').style.display = 'none';
             const playArea = document.getElementById('speak-play');
             playArea.style.display = 'flex';
@@ -942,17 +943,17 @@
             stopStoryTTS();
             if (speakProgress[currentStoryIdx] !== 1) {
                 listenExp += 20;
-                localStorage.setItem('listenBasicExp', listenExp);
+                window.__jcmkecSessionStore.setItem('listenBasicExp', listenExp);
                 document.getElementById('exp-display').innerText = listenExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
                 
                 speakProgress[currentStoryIdx] = 1;
-                localStorage.setItem('speakBasicProgress', JSON.stringify(speakProgress));
+                window.__jcmkecSessionStore.setItem('speakBasicProgress', JSON.stringify(speakProgress));
                 showToast("口語練習完成！+20 EXP");
                 
                 if (listenProgress.filter(p=>p===1).length === listenData.length && speakProgress.filter(p=>p===1).length === speakData.length) {
-                    localStorage.setItem('t_listen_1', 'true');
+                    window.__jcmkecSessionStore.setItem('t_listen_1', 'true');
                 }
             }
             switchMode('speak');

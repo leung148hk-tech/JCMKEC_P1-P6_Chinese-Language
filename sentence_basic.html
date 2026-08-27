@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>句子與語法 - 基礎趣味訓練</title>
@@ -140,7 +141,7 @@
 
     <script>
         // ================= 1. 核心狀態與輔助函數 =================
-        let sentExp = parseInt(localStorage.getItem('sentBasicExp')) || 0;
+        let sentExp = parseInt(window.__jcmkecSessionStore.getItem('sentBasicExp')) || 0;
         document.getElementById('exp-display').innerText = sentExp;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
@@ -272,7 +273,7 @@
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
             
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         };
 
         window.closeTutorial = function() {
@@ -388,11 +389,11 @@
         ];
 
         // 總共 120 題：保留進度，另記錄手機續學與章節收合偏好。
-        let userProgress = JSON.parse(localStorage.getItem('sentBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
-        let sentenceChapterOpenState = JSON.parse(localStorage.getItem('sentBasicChapterOpenState') || '{}');
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('sentBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let sentenceChapterOpenState = JSON.parse(window.__jcmkecSessionStore.getItem('sentBasicChapterOpenState') || '{}');
 
         window.getSentenceResumeIdx = function() {
-            const lastIdx = Number(localStorage.getItem('sentBasicLastQuestionIdx'));
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem('sentBasicLastQuestionIdx'));
             if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < rawQuestDataObj.length && userProgress[lastIdx] !== 1 && userProgress[lastIdx] !== 2) return lastIdx;
             return userProgress.findIndex(status => status !== 1 && status !== 2);
         };
@@ -405,7 +406,7 @@
 
         window.toggleSentenceChapter = function(catId) {
             sentenceChapterOpenState[catId] = !window.isSentenceChapterOpen(catId);
-            localStorage.setItem('sentBasicChapterOpenState', JSON.stringify(sentenceChapterOpenState));
+            window.__jcmkecSessionStore.setItem('sentBasicChapterOpenState', JSON.stringify(sentenceChapterOpenState));
             window.renderDirectory();
             requestAnimationFrame(() => document.getElementById(`sentence-chapter-${catId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         };
@@ -415,7 +416,7 @@
             if (idx === -1) { window.showToast('太棒了！120 題已全部完成。'); return; }
             const catId = rawQuestDataObj[idx].category;
             sentenceChapterOpenState[catId] = true;
-            localStorage.setItem('sentBasicChapterOpenState', JSON.stringify(sentenceChapterOpenState));
+            window.__jcmkecSessionStore.setItem('sentBasicChapterOpenState', JSON.stringify(sentenceChapterOpenState));
             window.startQuestion(idx);
         };
 
@@ -472,7 +473,7 @@
             const qData = rawQuestDataObj[idx];
             const qType = qData.category;
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + qType)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + qType)) {
                 pendingQuestionIdx = idx; 
                 window.showTutorial(qType);      
                 return;                   
@@ -480,7 +481,7 @@
 
             currentQuestionMistakes = 0; 
             currentQuestionIdx = idx;
-            localStorage.setItem('sentBasicLastQuestionIdx', String(idx));
+            window.__jcmkecSessionStore.setItem('sentBasicLastQuestionIdx', String(idx));
             window.currentHints = [];
             
             document.getElementById('quest-directory').style.display = 'none';
@@ -651,7 +652,7 @@
                 window.speakText("順序好像有點不對喔，請看提示！");
                 currentQuestionMistakes++;
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('sentBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentBasicProgress', JSON.stringify(userProgress));
                 
                 let chunksToReturn = reorderTarget.splice(correctCount);
                 for (let chunk of chunksToReturn) {
@@ -692,7 +693,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('sentBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentBasicProgress', JSON.stringify(userProgress));
                 
                 let hintMsg = "請再仔細想一想！";
                 const qType = rawQuestDataObj[currentQuestionIdx].category;
@@ -729,7 +730,7 @@
 
             if (expGained > 0) {
                 sentExp += expGained;
-                localStorage.setItem('sentBasicExp', sentExp);
+                window.__jcmkecSessionStore.setItem('sentBasicExp', sentExp);
                 document.getElementById('exp-display').innerText = sentExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -737,7 +738,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentQuestionIdx] = finalStatus;
-                localStorage.setItem('sentBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('sentBasicProgress', JSON.stringify(userProgress));
             }
 
             let modalIcon = finalStatus === 1 ? '🌟' : '✅';

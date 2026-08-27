@@ -17,12 +17,12 @@
   };
 
   function getPref(name, fallback) {
-    const value = localStorage.getItem(PREFIX + name);
+    const value = window.__jcmkecSessionStore.getItem(PREFIX + name);
     return value === null ? fallback : value;
   }
 
   function setPref(name, value) {
-    localStorage.setItem(PREFIX + name, String(value));
+    window.__jcmkecSessionStore.setItem(PREFIX + name, String(value));
   }
 
   function showNotice(message) {
@@ -46,7 +46,7 @@
     return Boolean(key) &&
       !key.startsWith('_profile_') &&
       !key.startsWith('__') &&
-      !key.startsWith('firebase:') &&
+      !key.startsWith('cloud:') &&
       !key.startsWith('primaryChineseDiagnostics') &&
       !key.startsWith('studentLastCourse') &&
       !key.startsWith('studentProgressLastBackup') &&
@@ -57,9 +57,9 @@
 
   function collectProgressData() {
     const data = {};
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i);
-      if (isExportableKey(key)) data[key] = localStorage.getItem(key);
+    for (let i = 0; i < window.__jcmkecSessionStore.length; i += 1) {
+      const key = window.__jcmkecSessionStore.key(i);
+      if (isExportableKey(key)) data[key] = window.__jcmkecSessionStore.getItem(key);
     }
     return data;
   }
@@ -78,19 +78,19 @@
 
   // 最近學習與本機備份日期屬於學生帳戶資料，不可由另一個帳戶讀取。
   function getScopedStorageKey(key) {
-    const activeProfile = sessionStorage.getItem('activeProfile');
+    const activeProfile = window.__jcmkecSessionStore.getItem('activeProfile');
     const profileId = activeProfile && activeProfile !== 'admin' ? activeProfile : 'anonymous';
     return `${key}.${profileId}`;
   }
 
   function recordLastCourse(url) {
     if (!courseLabels[url]) return;
-    localStorage.setItem(getScopedStorageKey('studentLastCourse'), JSON.stringify({ url, label: courseLabels[url], savedAt: new Date().toISOString() }));
+    window.__jcmkecSessionStore.setItem(getScopedStorageKey('studentLastCourse'), JSON.stringify({ url, label: courseLabels[url], savedAt: new Date().toISOString() }));
   }
 
   function getLastCourse() {
     try {
-      const course = JSON.parse(localStorage.getItem(getScopedStorageKey('studentLastCourse')) || 'null');
+      const course = JSON.parse(window.__jcmkecSessionStore.getItem(getScopedStorageKey('studentLastCourse')) || 'null');
       return course && courseLabels[course.url] ? course : null;
     } catch (_) {
       return null;
@@ -103,7 +103,7 @@
     if (!content || !grid || document.getElementById('student-tools-hub')) return;
     const recent = getLastCourse();
     const recentLabel = recent ? recent.label : '尚未開始關卡';
-    const backupAt = localStorage.getItem(getScopedStorageKey('studentProgressLastBackup'));
+    const backupAt = window.__jcmkecSessionStore.getItem(getScopedStorageKey('studentProgressLastBackup'));
     const backupLabel = backupAt ? `最近備份：${new Date(backupAt).toLocaleString()}` : '尚未建立本機備份';
     const hub = document.createElement('section');
     hub.id = 'student-tools-hub';
@@ -178,7 +178,7 @@
 
   function renderBackup() {
     const content = document.getElementById('student-tools-content');
-    const lastBackup = localStorage.getItem(getScopedStorageKey('studentProgressLastBackup'));
+    const lastBackup = window.__jcmkecSessionStore.getItem(getScopedStorageKey('studentProgressLastBackup'));
     document.getElementById('student-tools-title').textContent = '🛡️ 進度備份與還原';
     document.getElementById('student-tools-subtitle').textContent = '檔案只會下載到你的裝置，不會傳送到教師後台。';
     content.innerHTML = `
@@ -194,7 +194,7 @@
     const payload = { schema: BACKUP_SCHEMA, exportedAt: new Date().toISOString(), data: collectProgressData() };
     const stamp = payload.exportedAt.replace(/[:.]/g, '-');
     downloadText(JSON.stringify(payload, null, 2), `語文學習進度備份-${stamp}.json`, 'application/json;charset=utf-8');
-    localStorage.setItem(getScopedStorageKey('studentProgressLastBackup'), payload.exportedAt);
+    window.__jcmkecSessionStore.setItem(getScopedStorageKey('studentProgressLastBackup'), payload.exportedAt);
     const backupLabel = document.getElementById('student-backup-label');
     if (backupLabel) backupLabel.textContent = `最近備份：${new Date(payload.exportedAt).toLocaleString()}`;
     showNotice(`已下載 ${Object.keys(payload.data).length} 項本機學習資料。`);
@@ -217,9 +217,9 @@
           ? await window.StudentDialogs.confirm({ title: '要還原學習進度嗎？', message: restoreMessage, confirmLabel: '還原進度', cancelLabel: '取消', danger: true })
           : confirm(restoreMessage);
         if (!confirmed) return;
-        Object.keys(collectProgressData()).forEach(key => localStorage.removeItem(key));
-        entries.forEach(([key, value]) => localStorage.setItem(key, value));
-        localStorage.setItem(getScopedStorageKey('studentProgressLastBackup'), new Date().toISOString());
+        Object.keys(collectProgressData()).forEach(key => window.__jcmkecSessionStore.removeItem(key));
+        entries.forEach(([key, value]) => window.__jcmkecSessionStore.setItem(key, value));
+        window.__jcmkecSessionStore.setItem(getScopedStorageKey('studentProgressLastBackup'), new Date().toISOString());
         showNotice('還原完成，頁面將重新載入進度。');
         setTimeout(() => location.reload(), 900);
       } catch (_) {

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>閱讀理解 - 基礎拆段訓練</title>
@@ -201,7 +202,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音引擎 =================
-        let readExp = parseInt(localStorage.getItem('readBasicExp')) || 0;
+        let readExp = parseInt(window.__jcmkecSessionStore.getItem('readBasicExp')) || 0;
         document.getElementById('exp-display').innerText = readExp;
         
         let currentPassageIdx = -1;
@@ -383,7 +384,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[tutKey];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -668,11 +669,11 @@
         ];
 
         // 載入進度與手機續學／章節收合狀態
-        let userProgress = JSON.parse(localStorage.getItem('readBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
-        let readChapterOpenState = JSON.parse(localStorage.getItem('readBasicChapterOpenState') || '{}');
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('readBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let readChapterOpenState = JSON.parse(window.__jcmkecSessionStore.getItem('readBasicChapterOpenState') || '{}');
 
         function getReadingResumeIdx() {
-            const lastIdx = Number(localStorage.getItem('readBasicLastPassageIdx'));
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem('readBasicLastPassageIdx'));
             if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < rawQuestDataObj.length && userProgress[lastIdx] === 0) return lastIdx;
             return userProgress.findIndex(status => status === 0);
         }
@@ -688,7 +689,7 @@
 
         function toggleReadingChapter(category) {
             readChapterOpenState[category] = !isReadingChapterOpen(category);
-            localStorage.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
+            window.__jcmkecSessionStore.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
             renderDirectory();
             requestAnimationFrame(() => document.getElementById(`read-chapter-${category}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
         }
@@ -702,7 +703,7 @@
             const category = getReadingChapterForIdx(idx);
             if (category) {
                 readChapterOpenState[category] = true;
-                localStorage.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
+                window.__jcmkecSessionStore.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
             }
             startPassage(idx);
         }
@@ -790,14 +791,14 @@
             const passage = rawQuestDataObj[idx];
             
             // 🌟 教學攔截
-            if (!forceStart && !localStorage.getItem('tut_seen_' + passage.tut)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + passage.tut)) {
                 currentPassageIdx = idx; // 記住要進哪一篇
                 showTutorial(passage.tut);
                 return;
             }
 
             currentPassageIdx = idx;
-            localStorage.setItem('readBasicLastPassageIdx', String(idx));
+            window.__jcmkecSessionStore.setItem('readBasicLastPassageIdx', String(idx));
             currentQuestionIdx = 0; // 從第一題開始
             currentPassageMistakes = 0;
             
@@ -872,7 +873,7 @@
                 else readExp += 2;
 
                 document.getElementById('exp-display').innerText = readExp;
-                localStorage.setItem('readBasicExp', readExp);
+                window.__jcmkecSessionStore.setItem('readBasicExp', readExp);
 
                 // 顯示單題回饋
                 document.getElementById('feedback-desc').innerHTML = `<span class="bg-sky-50 p-4 rounded-xl block border border-sky-100 text-sky-900">${qData.exp}</span>`;
@@ -952,7 +953,7 @@
 
             if (expGained > 0) {
                 readExp += expGained;
-                localStorage.setItem('readBasicExp', readExp);
+                window.__jcmkecSessionStore.setItem('readBasicExp', readExp);
                 document.getElementById('exp-display').innerText = readExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -960,7 +961,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentPassageIdx] = finalStatus;
-                localStorage.setItem('readBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('readBasicProgress', JSON.stringify(userProgress));
             }
 
             let expMsg = expGained > 0 
@@ -980,7 +981,7 @@
             
             // 首頁連動
             if(userProgress.filter(p => p > 0).length === rawQuestDataObj.length) {
-                localStorage.setItem('t_read_1', 'true');
+                window.__jcmkecSessionStore.setItem('t_read_1', 'true');
             }
         }
 
@@ -991,7 +992,7 @@
             const category = getReadingChapterForIdx(currentPassageIdx);
             if (category) {
                 readChapterOpenState[category] = true;
-                localStorage.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
+                window.__jcmkecSessionStore.setItem('readBasicChapterOpenState', JSON.stringify(readChapterOpenState));
             }
             renderDirectory();
             requestAnimationFrame(() => document.getElementById(`read-chapter-${category}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));

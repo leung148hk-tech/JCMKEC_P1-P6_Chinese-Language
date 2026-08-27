@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>字詞基礎 - 標準常規訓練</title>
@@ -249,7 +250,7 @@
 
     <script>
         // ================= 1. 核心設定 =================
-        let stdExp = parseInt(localStorage.getItem('stdExp')) || 0;
+        let stdExp = parseInt(window.__jcmkecSessionStore.getItem('stdExp')) || 0;
         document.getElementById('exp-display').innerText = stdExp;
         let currentQuestionMistakes = 0;
         let currentQuestionIdx = -1;
@@ -291,7 +292,7 @@
             const content = document.getElementById('tutorial-content');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_word_std', 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_word_std', 'true');
         }
 
         function closeTutorial() {
@@ -763,7 +764,7 @@
             ...formatData(idiomData, 'c-idiom')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('stdQuestProgress')) || new Array(300).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('stdQuestProgress')) || new Array(300).fill(0);
 
         function renderDirectory() {
             const dirContainer = document.getElementById('directory-content');
@@ -804,7 +805,7 @@
             const qData = rawQuestDataObj[idx];
             const catId = qData.category;
 
-            if (!forceStart && !localStorage.getItem('tut_seen_word_std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_word_std')) {
                 pendingQuestionIdx = idx;
                 showTutorial(catId);
                 return;
@@ -958,7 +959,7 @@
 
                 if (expGained > 0) {
                     stdExp += expGained;
-                    localStorage.setItem('stdExp', stdExp);
+                    window.__jcmkecSessionStore.setItem('stdExp', stdExp);
                     document.getElementById('exp-display').innerText = stdExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -966,7 +967,7 @@
 
                 if (finalStatus === 1 || previousStatus !== 1) {
                     userProgress[currentQuestionIdx] = finalStatus;
-                    localStorage.setItem('stdQuestProgress', JSON.stringify(userProgress));
+                    window.__jcmkecSessionStore.setItem('stdQuestProgress', JSON.stringify(userProgress));
                 }
 
                 if (qData.targetChar) {
@@ -1009,7 +1010,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('stdQuestProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('stdQuestProgress', JSON.stringify(userProgress));
                 
                 // 動態生成智能弱化提示
                 let hintMsg = getSubtleHint(qData.category, qData.exp);
@@ -1194,7 +1195,7 @@
                     speakText("寫得好！");
                     
                     stdExp += 2;
-                    localStorage.setItem('stdExp', stdExp);
+                    window.__jcmkecSessionStore.setItem('stdExp', stdExp);
                     document.getElementById('exp-display').innerText = stdExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);

@@ -1,240 +1,39 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小學中國語文學習網 - 終極特訓平台</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
-        
-        .bg-grid-pattern {
-            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
-            background-size: 40px 40px;
-        }
-
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        .pop { animation: pop 0.3s ease-out; }
-        
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
-        .float-anim { animation: float 3s ease-in-out infinite; }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-
-        .module-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-        @media (hover: hover) {
-            .module-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
-        }
-        button:focus-visible, a:focus-visible, input:focus-visible {
-            outline: 3px solid #f59e0b;
-            outline-offset: 3px;
-        }
-
-        .lvl-btn { transition: all 0.2s; }
-        .lvl-btn:active { transform: scale(0.95); }
-        
-        .badge-locked { background-color: #f1f5f9; color: #94a3b8; border: 2px dashed #cbd5e1; }
-        .badge-unlocked { background-color: #fef08a; color: #854d0e; border: 2px solid #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
-
-        
-        /* 載入動畫 */
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-    <script src="diagnostics.js"></script>
-    <script src="student-feedback.js"></script>
-    <script src="student-sync-status.js"></script>
-    <script src="student-dialogs.js"></script>
-    <link rel="stylesheet" href="mobile-accessibility.css">
-    <link rel="stylesheet" href="student-dialogs.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="JCMKEC 小學中國語文題庫：免登入、直接遊玩、每次開啟均從新的練習開始。">
+  <title>JCMKEC 小學中國語文題庫</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="mobile-accessibility.css">
+  <style>
+    body { font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+    .bg-grid-pattern { background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px); background-size: 40px 40px; }
+    .module-card { transition: transform .25s ease, box-shadow .25s ease; }
+    @media (hover: hover) { .module-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.04); } }
+    button:focus-visible, a:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
+    .lvl-btn { transition: all .2s; }
+    .lvl-btn:active { transform: scale(.97); }
+  </style>
 </head>
 <body class="text-slate-800 flex flex-col min-h-[100dvh] bg-grid-pattern">
+  <main class="flex-1">
+    <header class="bg-gradient-to-br from-slate-800 to-indigo-900 px-4 py-10 text-white shadow-2xl">
+      <div class="mx-auto max-w-7xl text-center">
+        <div class="mb-3 text-5xl" aria-hidden="true">🎓</div>
+        <h1 class="text-3xl font-black tracking-wider md:text-5xl">JCMKEC 小學中國語文題庫</h1>
+        <p class="mt-3 text-base font-bold text-indigo-100 md:text-xl">直接選擇關卡，即時開始練習</p>
+        <p class="mx-auto mt-5 max-w-2xl rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold leading-relaxed text-indigo-50 md:text-base">免登入、免帳戶、免雲端同步。每次重新整理、離開或關閉頁面後，作答狀態及分數不會保存。</p>
+      </div>
+    </header>
 
-    <!-- 全局 Loading 遮罩 -->
-    <div id="global-loader" class="fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-        <span class="loader mb-4" style="width: 50px; height: 50px; border-width: 6px;"></span>
-        <h2 class="text-2xl font-bold" id="loader-text">系統連線中...</h2>
-        <p class="text-slate-400 text-sm mt-2 font-bold">若等待過久，將自動為您切換至離線模式</p>
-    </div>
-
-    <!-- ================= 2. 老師專屬後台 ================= -->
-    <div id="teacher-dashboard" class="absolute inset-0 z-40 bg-slate-100 hidden flex-col overflow-y-auto">
-        <div class="bg-slate-800 text-white p-4 md:p-6 shadow-md flex justify-between items-center flex-shrink-0">
-            <h1 class="text-xl md:text-2xl font-black flex items-center gap-2">👨‍🏫 老師雲端管理後台 <span class="bg-rose-500 text-xs px-2 py-1 rounded">最高權限</span></h1>
-            <div class="flex gap-2 md:gap-4">
-                <button onclick="exportRankingToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 md:px-4 rounded-lg transition text-xs md:text-sm flex items-center gap-1 shadow">📥 匯出 CSV 報表</button>
-                <button onclick="fetchCloudDataForTeacher()" class="bg-indigo-500 hover:bg-indigo-600 font-bold py-2 px-3 md:px-4 rounded-lg transition flex items-center gap-2 text-xs md:text-sm shadow">🔄 更新數據</button>
-                <button onclick="location.reload()" class="bg-white/20 hover:bg-rose-500 font-bold py-2 px-3 md:px-4 rounded-lg transition text-xs md:text-sm">返回題庫</button>
-            </div>
-        </div>
-        
-        <div class="max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6">
-            
-            <!-- 班級能力雷達分析 -->
-            <div id="analysis-section" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
-                <!-- 班級八大能力雷達統計 -->
-                <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-200 lg:col-span-2">
-                    <h3 class="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">📊 全班八大能力平均掌握度</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="class-skills-container"></div>
-                </div>
-
-                <!-- 關卡通過率預警 -->
-                <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-200">
-                    <h3 class="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">⚠️ 全班最易錯關卡預警</h3>
-                    <div class="flex flex-col gap-3" id="warning-stages-container"></div>
-                </div>
-            </div>
-
-            <!-- 學生英雄排行榜 -->
-            <div class="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
-                <div class="p-6 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <h2 class="text-xl font-black text-slate-800">🏆 班級學習排行榜 (自動雲端同步)</h2>
-                    <p class="text-sm font-bold text-slate-500" id="total-students-count">註冊人數：0 人</p>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[750px]">
-                        <thead>
-                            <tr class="bg-indigo-50 text-indigo-800 text-sm uppercase">
-                                <th class="p-4 font-black border-b-2 border-indigo-100 text-center">排名</th>
-                                <th class="p-4 font-black border-b-2 border-indigo-100">學生姓名 (帳號)</th>
-                                <th class="p-4 font-black border-b-2 border-indigo-100 text-center">總 EXP</th>
-                                <th class="p-4 font-black border-b-2 border-indigo-100 text-center">精通徽章 (滿分24)</th>
-                                <th class="p-4 font-black border-b-2 border-indigo-100 text-center">最後在線時間</th>
-                                <th class="p-4 font-black border-b-2 border-indigo-100 text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="teacher-table-body" class="text-slate-700 font-bold">
-                            <tr><td colspan="6" class="p-6 text-center text-slate-400 font-bold">正在從雲端載入資料...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= 學生專屬個人詳情鑽取彈窗 (Student Drill-down Modal) ================= -->
-    <div id="student-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-3xl p-6 md:p-8 shadow-2xl max-w-3xl w-full flex flex-col max-h-[95vh] transition-all transform scale-95 duration-200">
-            <div class="flex justify-between items-start mb-4 border-b pb-4 flex-shrink-0">
-                <div>
-                    <h2 class="text-2xl font-black text-indigo-800 flex items-center gap-2">
-                        <span>📊</span> <span id="sd-realname">學生</span> 的專屬學情報告
-                    </h2>
-                    <p class="text-slate-400 text-sm font-bold mt-1">帳號: <span id="sd-username"></span> | 總經驗: <span id="sd-exp" class="text-orange-500"></span></p>
-                </div>
-                <button onclick="closeStudentDetailModal()" class="text-slate-400 hover:text-rose-500 text-3xl font-bold leading-none">&times;</button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto pr-2 space-y-6 no-scrollbar">
-                
-                <!-- 🤖 智能作答數據與弱項分析 -->
-                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                    <h3 class="font-black text-slate-800 mb-4 text-base flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> 🤖 智能作答數據與弱項分析
-                    </h3>
-                    
-                    <div class="flex justify-between gap-3 mb-4 text-center">
-                        <div class="flex-1 bg-yellow-50 border border-yellow-200 p-3 rounded-xl shadow-sm">
-                            <div class="text-xs font-bold text-yellow-700 mb-1">🌟 一次答對</div>
-                            <div class="text-3xl font-black text-yellow-600" id="sd-perfect-count">0</div>
-                        </div>
-                        <div class="flex-1 bg-emerald-50 border border-emerald-200 p-3 rounded-xl shadow-sm">
-                            <div class="text-xs font-bold text-emerald-700 mb-1">✅ 補答答對</div>
-                            <div class="text-3xl font-black text-emerald-600" id="sd-hint-count">0</div>
-                        </div>
-                        <div class="flex-1 bg-rose-50 border border-rose-200 p-3 rounded-xl shadow-sm">
-                            <div class="text-xs font-bold text-rose-700 mb-1">❌ 錯誤次數</div>
-                            <div class="text-3xl font-black text-rose-600" id="sd-wrong-count">0</div>
-                        </div>
-                    </div>
-                    
-                    <p id="sd-ai-report" class="text-sm md:text-base text-slate-700 leading-relaxed bg-white p-4 rounded-xl border border-slate-200 shadow-sm"></p>
-                </div>
-
-                <!-- 八大能力分析 -->
-                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                    <h3 class="font-black text-slate-800 mb-4 text-base flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> 八大語文能力分析
-                    </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="sd-skills-container"></div>
-                </div>
-
-                <!-- 24個關卡精通打卡清單 -->
-                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                    <h3 class="font-black text-slate-800 mb-4 text-base flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 24關卡精通打卡狀態 (🏅表示已精通)
-                    </h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="sd-badges-container"></div>
-                </div>
-            </div>
-
-            <div class="flex-shrink-0 mt-6 pt-4 border-t text-right">
-                <button onclick="closeStudentDetailModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-xl transition shadow active:scale-95">關閉報告</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= 3. 學生全局 Dashboard 頂部 ================= -->
-    <div id="dashboard-screen" class="hidden flex-col flex-1">
-        <div class="bg-gradient-to-br from-slate-800 to-indigo-900 text-white pb-10 pt-4 px-4 md:px-8 shadow-2xl relative overflow-hidden flex-shrink-0">
-            <div class="absolute -right-20 -top-20 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
-            <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-blue-400 opacity-10 rounded-full blur-2xl"></div>
-
-            <div class="max-w-7xl mx-auto flex justify-between items-center relative z-10 mb-4 pb-4 border-b border-white/10">
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="font-black text-indigo-200 tracking-wider flex items-center gap-2 text-sm md:text-base">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 學習進度已準備就緒
-                    </div>
-                    <div id="student-sync-status" role="status" aria-live="polite" aria-atomic="true" data-state="local" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs md:text-sm font-black">
-                        <span data-sync-status-icon aria-hidden="true"></span>
-                        <span data-sync-status-text>本機進度已保存</span>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="manualSyncToCloud()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-1.5 px-3 rounded-lg text-xs md:text-sm transition flex items-center gap-1 shadow" title="如果您準備關閉瀏覽器，可以點擊此按鈕確保最新進度已上傳">
-                        ☁️ <span class="hidden sm:inline">手動備份</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center relative z-10 gap-6">
-                <!-- 學生檔案與動態稱號 -->
-                <div class="flex items-center gap-4 w-full md:w-auto">
-                    <div class="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center text-4xl md:text-5xl shadow-lg border-4 border-indigo-400 flex-shrink-0 float-anim">👦🏻</div>
-                    <div>
-                        <h1 class="text-xl md:text-3xl font-black mb-1 tracking-wider flex items-center flex-wrap gap-2">
-                            <span id="profile-display-name" class="text-white">載入中...</span>
-                            <span class="text-indigo-300 mx-1 hidden sm:inline">|</span>
-                            <span id="user-title" class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">語文見習生</span>
-                            <span class="bg-indigo-600/80 text-white text-xs md:text-sm px-2 md:px-3 py-1 rounded-full border border-indigo-400 shadow-sm" id="user-level">Lv. 1</span>
-                        </h1>
-                        <p class="text-indigo-200 font-bold text-xs md:text-base">歡迎回到總部！準備好今天的特訓了嗎？</p>
-                    </div>
-                </div>
-                
-                <!-- 經驗值與進度統計區 -->
-                <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 md:p-5 rounded-2xl w-full md:w-96 shadow-xl">
-                    <div class="flex justify-between items-end mb-2">
-                        <span class="font-bold text-indigo-100 flex items-center gap-2"><span>📊</span> 學習總進度</span>
-                        <span class="font-black text-2xl md:text-3xl text-yellow-400 drop-shadow-md" id="exp-text">0 <span class="text-sm text-indigo-200 font-bold">EXP</span></span>
-                    </div>
-                    <div class="w-full bg-slate-700/50 rounded-full h-3 md:h-4 mb-3 overflow-hidden border border-slate-600 shadow-inner">
-                        <div id="total-progress-bar" class="bg-gradient-to-r from-emerald-400 to-yellow-300 h-full rounded-full transition-all duration-1000 w-0 relative">
-                            <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
-                        </div>
-                    </div>
-                    <div class="flex justify-between text-xs md:text-sm font-bold text-indigo-200 mb-4">
-                        <span>已精通模組：<span id="progress-text" class="text-white text-sm md:text-base">0 / 24</span></span>
-                        <span>🏆 收集徽章：<span id="badge-count" class="text-white text-sm md:text-base">0</span></span>
-                    </div>
-                    <button onclick="quickStart()" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-2 rounded-xl shadow transition active:scale-95 flex justify-center items-center gap-2 border-b-4 border-blue-700 active:border-b-0 active:translate-y-1">
-                        <span>🚀 智能推薦：繼續學習</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= 8 大分類卡片網格 ================= -->
+    <section class="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8" aria-labelledby="course-heading">
+      <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900 shadow-sm">
+        <h2 id="course-heading" class="text-lg font-black md:text-xl">請選擇練習範疇及程度</h2>
+        <p class="mt-1 text-sm font-bold leading-relaxed">所有 24 個關卡均可直接開啟，沒有解鎖條件；答題回饋仍會在當前頁面即時顯示。</p>
+      </div>
+    <!-- ================= 8 大分類卡片網格 ================= -->
         <div class="max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 -mt-6 relative z-20 flex-1">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 md:gap-6">
 
@@ -244,16 +43,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">部首部件、量詞、形近字防錯、錯別字修正、近反義詞與成語。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('word_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_word_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成補底版即可解鎖">🔒</div>
+                            <button onclick="location.href='word_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('word_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_word_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成標準版即可解鎖">🔒</div>
+                            <button onclick="location.href='word_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('word_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_word_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成拔尖版即可解鎖">🔒</div>
+                            <button onclick="location.href='word_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -264,16 +60,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">二至四素句重裝、擴充句子、關聯詞邏輯、把被字句與句型轉換。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('sentence_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_sent_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='sentence_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('sentence_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_sent_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='sentence_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('sentence_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_sent_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='sentence_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -284,16 +77,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">基礎標點至引號破折號、明暗借喻辨析、擬人、排比與反問設問。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('rhetoric_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_rhet_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='rhetoric_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('rhetoric_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_rhet_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成標準版即可解鎖">🔒</div>
+                            <button onclick="location.href='rhetoric_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('rhetoric_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_rhet_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成拔尖版即可解鎖">🔒</div>
+                            <button onclick="location.href='rhetoric_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -304,16 +94,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">排句成段邏輯、書信/日記/通告/建議書格式重組與沙盒模擬。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('paragraph_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_para_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='paragraph_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('paragraph_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_para_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成標準版即可解鎖">🔒</div>
+                            <button onclick="location.href='paragraph_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('paragraph_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_para_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成拔尖版即可解鎖">🔒</div>
+                            <button onclick="location.href='paragraph_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -324,16 +111,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">提取資訊、三層次推論、主旨歸納、寫作手法與深層次評價。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('read_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_read_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='read_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('read_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_read_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成標準版即可解鎖">🔒</div>
+                            <button onclick="location.href='read_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('read_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_read_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成拔尖版即可解鎖">🔒</div>
+                            <button onclick="location.href='read_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -344,16 +128,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">語音故事盲聽、六要素提取、弦外之音推論與看圖說話改編。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('listen_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_listen_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='listen_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('listen_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_listen_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='listen_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('listen_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_listen_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='listen_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -364,16 +145,13 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">古詩卡拉OK帶讀、神話節日、歷史典故謀略與文言文啟蒙。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('culture_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_culture_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='culture_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('culture_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_culture_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='culture_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('culture_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_culture_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none">🔒</div>
+                            <button onclick="location.href='culture_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
@@ -384,847 +162,22 @@
                     <p class="text-slate-500 font-bold mb-5 text-sm md:text-base leading-relaxed flex-grow">看圖故事拼湊、五感擴寫、段落框架建構與寫作小錦囊。</p>
                     <div class="flex flex-col gap-2 md:gap-3">
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('write_basic.html')" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
-                            <div id="t_write_1" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成補底版即可解鎖">🔒</div>
+                            <button onclick="location.href='write_basic.html'" class="lvl-btn flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-emerald-200 text-left shadow-sm text-sm md:text-base">🌱 補底版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('write_standard.html')" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
-                            <div id="t_write_2" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成標準版即可解鎖">🔒</div>
+                            <button onclick="location.href='write_standard.html'" class="lvl-btn flex-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-orange-200 text-left shadow-sm text-sm md:text-base">⭐ 標準版</button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="saveAndGo('write_advanced.html')" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
-                            <div id="t_write_3" class="badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none" title="完成拔尖版即可解鎖">🔒</div>
+                            <button onclick="location.href='write_advanced.html'" class="lvl-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-3 px-3 md:px-4 rounded-xl border-2 border-rose-200 text-left shadow-sm text-sm md:text-base">🚀 拔尖版</button>
                         </div>
                     </div>
                 </div>
 
             </div>
         </div>
-    </div>
 
-    <!-- 每日登入獎勵 Modal -->
-    <div id="daily-login-modal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white rounded-3xl p-6 md:p-8 shadow-2xl w-[90%] max-w-sm text-center transform scale-90 transition-transform duration-300">
-            <div class="text-6xl md:text-7xl mb-4 animate-bounce">🎁</div>
-            <h2 class="text-2xl md:text-3xl font-black text-indigo-600 mb-2">每日簽到成功！</h2>
-            <p class="text-slate-600 font-bold mb-6 text-lg md:text-xl">堅持學習，太棒了！<br><span class="text-amber-500 text-xl md:text-2xl mt-2 inline-block">+10 EXP</span></p>
-            <button onclick="closeDailyLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl shadow-lg transition text-lg md:text-xl border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1">收下獎勵！</button>
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // ==========================================
-        // 💡 您的專屬 Firebase 金鑰已經為您設定好了！
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_MSMghlz2zo3vMwbbHCGU3acFD6KMyo8",
-            authDomain: "chinese-training-platform.firebaseapp.com",
-            projectId: "chinese-training-platform",
-            storageBucket: "chinese-training-platform.firebasestorage.app",
-            messagingSenderId: "231283500811",
-            appId: "1:231283500811:web:8e85c0ad813f1631f9a40e"
-        };
-        const appId = "chinese-training-platform";
-
-        let app, auth, db;
-        let currentUserId = null; 
-
-        // 全球快取，用於後台詳細鑽取與下載
-        window.allStudentsCache = [];
-
-        // 隱藏 Loader 及其定時器
-        let loaderTimeout;
-        
-        function hideLoader() {
-            clearTimeout(loaderTimeout);
-            const loader = document.getElementById('global-loader');
-            if (loader) loader.classList.add('hidden');
-        }
-        function showLoader(text) {
-            document.getElementById('loader-text').innerText = text;
-            document.getElementById('global-loader').classList.remove('hidden');
-        }
-
-        // 行內錯誤顯示輔助
-        function showAuthError(message) {
-            const errorBox = document.getElementById('auth-error-box');
-            const errorText = document.getElementById('auth-error-text');
-            errorText.innerText = message;
-            errorBox.classList.remove('hidden');
-            errorBox.classList.add('shake');
-            setTimeout(() => errorBox.classList.remove('shake'), 400);
-        }
-        function hideAuthError() {
-            document.getElementById('auth-error-box').classList.add('hidden');
-        }
-
-        // 密碼顯示/隱藏切換
-        window.togglePasswordVisibility = function(inputId) {
-            const input = document.getElementById(inputId);
-            if(input) {
-                input.type = input.type === 'password' ? 'text' : 'password';
-            }
-        }
-
-        // 經驗值對齊金鑰
-        const expKeys = [
-            'userExp', 'stdExp', 'advExp', 
-            'sentBasicExp', 'sentStandardExp', 'sentAdvExp', 
-            'rhetBasicExp', 'rhetStdExp', 'rhetAdvExp', 
-            'paraBasicExp', 'paraStdExp', 'paraAdvExp', 
-            'readBasicExp', 'readStandardExp', 'readAdvExp', 
-            'listenBasicExp', 'listenStandardExp', 'listenAdvExp', 
-            'cultureBasicExp', 'cultureStandardExp', 'cultureAdvancedExp', 
-            'writeBasicExp_v2', 'writeStdExp_v9', 'writeAdvExp_v11',
-            'loginBonusExp' 
-        ];
-
-        const catMap = {1:'word', 2:'sent', 3:'rhet', 4:'para', 5:'read', 6:'listen', 7:'culture', 8:'write'};
-        const pagesMap = {
-            't_word_1': 'word_basic.html', 't_word_2': 'word_standard.html', 't_word_3': 'word_advanced.html',
-            't_sent_1': 'sentence_basic.html', 't_sent_2': 'sentence_standard.html', 't_sent_3': 'sentence_advanced.html',
-            't_rhet_1': 'rhetoric_basic.html', 't_rhet_2': 'rhetoric_standard.html', 't_rhet_3': 'rhetoric_advanced.html',
-            't_para_1': 'paragraph_basic.html', 't_para_2': 'paragraph_standard.html', 't_para_3': 'paragraph_advanced.html',
-            't_read_1': 'read_basic.html', 't_read_2': 'read_standard.html', 't_read_3': 'read_advanced.html',
-            't_listen_1': 'listen_basic.html', 't_listen_2': 'listen_standard.html', 't_listen_3': 'listen_advanced.html',
-            't_culture_1': 'culture_basic.html', 't_culture_2': 'culture_standard.html', 't_culture_3': 'culture_advanced.html',
-            't_write_1': 'write_basic.html', 't_write_2': 'write_standard.html', 't_write_3': 'write_advanced.html'
-        };
-
-        // 1. 初始化
-        document.addEventListener("DOMContentLoaded", async () => {
-            // If the cloud connection is slow, students still enter the question bank locally.
-            loaderTimeout = setTimeout(() => {
-                const loader = document.getElementById('global-loader');
-                if (loader && !loader.classList.contains('hidden')) {
-                    hideLoader();
-                    showDashboard('同學');
-                }
-            }, 5000);
-
-            try {
-                if (Object.keys(firebaseConfig).length === 0) throw new Error("無 Firebase 設定");
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                await initAuthFlow();
-            } catch (error) {
-                console.error("Firebase 初始化失敗：", error);
-                hideLoader();
-                // Offline fallback: the question bank remains available without login.
-                showDashboard('同學');
-            }
-        });
-
-        // 2. 認證流 (Rule 3 - 偵測自訂專案以避免權杖不相符錯誤)
-        async function initAuthFlow() {
-            // 偵測是否使用了自訂的 Firebase 專案（如果與預設專案不同代表是自訂的）
-            const isSystemProject = typeof __firebase_config !== 'undefined' && 
-                                    JSON.parse(__firebase_config).projectId === firebaseConfig.projectId;
-            
-            try {
-                // 如果是自訂專案，必須直接使用匿名登入，跳過系統安全權杖以防 mismatch
-                if (isSystemProject && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (authErr) {
-                console.error("驗證失敗，嘗試使用匿名登入...", authErr);
-                try {
-                    await signInAnonymously(auth);
-                } catch(e) {
-                    console.error("匿名登入亦失敗，切換為本地降級模式：", e);
-                    hideLoader();
-                }
-            }
-
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    currentUserId = user.uid;
-                    // 讀取「記住我」帳號
-                    const rememberedUser = localStorage.getItem('__remembered_username');
-                    if (rememberedUser) {
-                        const userField = document.getElementById('login-username');
-                        if (userField) userField.value = rememberedUser;
-                        const remCheckbox = document.getElementById('login-remember-me');
-                        if (remCheckbox) remCheckbox.checked = true;
-                    }
-                    await checkUserSession();
-                } else {
-                    hideLoader();
-                }
-            });
-        }
-
-        // 3. Direct question-bank access
-        async function checkUserSession() {
-            // Student accounts are no longer required. The question bank opens for every visitor.
-            sessionStorage.removeItem('activeProfile');
-            hideLoader();
-            showDashboard('同學');
-        }
-
-        const CLOUD_SYNC_TIMEOUT_MS = 3000;
-
-        // 雲端請求可能受弱網、離線快取或瀏覽器限制而延後；介面最多等待三秒。
-        // 原請求不會被取消，若連線恢復仍可在背景完成已擷取的進度上傳。
-        async function syncProgressWithDeadline(username) {
-            if (!navigator.onLine) {
-                window.StudentSyncStatus?.deferred('目前離線；進度只保存在這台裝置');
-                return false;
-            }
-            window.StudentSyncStatus?.start();
-            const timeout = new Promise(resolve => setTimeout(() => resolve(false), CLOUD_SYNC_TIMEOUT_MS));
-            try {
-                const completed = Boolean(await Promise.race([saveLocalToCloud(username), timeout]));
-                if (completed) window.StudentSyncStatus?.success();
-                else window.StudentSyncStatus?.deferred();
-                return completed;
-            } catch (error) {
-                console.warn('[Cloud Sync] 同步等待逾時或失敗：', error);
-                window.StudentSyncStatus?.deferred();
-                return false;
-            }
-        }
-
-        // 學生端使用頁內確認與通知；老師後台流程維持原有原生確認，不在本輪修改範圍內。
-        async function confirmStudentAction(options) {
-            if (window.StudentDialogs?.confirm) return window.StudentDialogs.confirm(options);
-            return confirm(options.message || '請確認你的選擇。');
-        }
-
-        function notifyStudentAction(message, tone = 'info') {
-            if (window.StudentDialogs?.notify) window.StudentDialogs.notify(message, tone);
-            else alert(message);
-        }
-
-        // 自動上傳資料
-        async function saveLocalToCloud(username) {
-            if (!currentUserId || !username || username === 'admin') return false;
-            window.StudentSyncStatus?.start();
-            try {
-                let rawData = {};
-                for (let i = 0; i < localStorage.length; i++) {
-                    let k = localStorage.key(i);
-                    if (k !== '__active_realname' && k !== '__remembered_username') {
-                        rawData[k] = localStorage.getItem(k);
-                    }
-                }
-
-                let totalExp = 0;
-                expKeys.forEach(k => {
-                    totalExp += parseInt(rawData[k]) || 0;
-                });
-
-                let badges = 0;
-                for(let i = 1; i <= 8; i++) {
-                    for(let j = 1; j <= 3; j++) {
-                        let id = 't_' + catMap[i] + '_' + j;
-                        if(rawData[id] === 'true') badges++;
-                    }
-                }
-
-                let catsExp = {
-                    word: (parseInt(rawData['userExp']) || 0) + (parseInt(rawData['stdExp']) || 0) + (parseInt(rawData['advExp']) || 0),
-                    sent: (parseInt(rawData['sentBasicExp']) || 0) + (parseInt(rawData['sentStandardExp']) || 0) + (parseInt(rawData['sentAdvExp']) || 0),
-                    rhet: (parseInt(rawData['rhetBasicExp']) || 0) + (parseInt(rawData['rhetStdExp']) || 0) + (parseInt(rawData['rhetAdvExp']) || 0),
-                    para: (parseInt(rawData['paraBasicExp']) || 0) + (parseInt(rawData['paraStdExp']) || 0) + (parseInt(rawData['paraAdvExp']) || 0),
-                    read: (parseInt(rawData['readBasicExp']) || 0) + (parseInt(rawData['readStandardExp']) || 0) + (parseInt(rawData['readAdvExp']) || 0),
-                    listen: (parseInt(rawData['listenBasicExp']) || 0) + (parseInt(rawData['listenStandardExp']) || 0) + (parseInt(rawData['listenAdvExp']) || 0),
-                    culture: (parseInt(rawData['cultureBasicExp']) || 0) + (parseInt(rawData['cultureStandardExp']) || 0) + (parseInt(rawData['cultureAdvancedExp']) || 0),
-                    write: (parseInt(rawData['writeBasicExp_v2']) || 0) + (parseInt(rawData['writeStdExp_v9']) || 0) + (parseInt(rawData['writeAdvExp_v11']) || 0)
-                };
-
-                let exportObj = {
-                    totalExp: totalExp,
-                    badges: badges,
-                    cats: catsExp,
-                    raw: rawData,
-                    lastUpdated: new Date().toISOString()
-                };
-
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', username);
-                await setDoc(docRef, exportObj, { merge: true });
-                window.StudentSyncStatus?.success();
-                return true;
-            } catch (e) {
-                console.error("[Cloud Sync] 備份失敗：", e);
-                window.StudentSyncStatus?.deferred();
-                return false;
-            }
-        }
-
-        window.manualSyncToCloud = async function() {
-            const activeUser = sessionStorage.getItem('activeProfile');
-            if (activeUser && activeUser !== 'admin') {
-                showLoader("雲端備份中...");
-                const syncCompleted = await syncProgressWithDeadline(activeUser);
-                hideLoader();
-                notifyStudentAction(
-                    syncCompleted ? '已同步到雲端！你的本機學習進度已安全備份。' : '本機進度已保存；網路較慢，雲端同步稍後完成。請在網路穩定時再按一次手動備份。',
-                    syncCompleted ? 'success' : 'warning'
-                );
-            }
-        };
-
-        // 學生視窗
-        function showDashboard(profileName = '同學') {
-            document.getElementById('teacher-dashboard').classList.add('hidden');
-            document.getElementById('teacher-dashboard').classList.remove('flex');
-            
-            document.getElementById('dashboard-screen').classList.remove('hidden');
-            document.getElementById('dashboard-screen').classList.add('flex');
-            
-            document.getElementById('profile-display-name').innerText = profileName;
-            updateDashboardUI();
-        }
-
-        function updateDashboardUI() {
-            let total = 0;
-            expKeys.forEach(key => {
-                total += parseInt(localStorage.getItem(key)) || 0;
-            });
-
-            animateValue("exp-text", parseInt(document.getElementById('exp-text').innerText.replace(/[^0-9]/g, '')) || 0, total, 1000);
-
-            let level = Math.floor(total / 500) + 1;
-            document.getElementById('user-level').innerText = 'Lv. ' + level;
-
-            let title = "語文見習生";
-            if (level >= 4) title = "語文探索者";
-            if (level >= 7) title = "語文小達人";
-            if (level >= 10) title = "語文大師";
-            if (level >= 15) title = "語文大宗師";
-            if (level >= 20) title = "傳說級文豪";
-            document.getElementById('user-title').innerText = title;
-
-            let completed = 0;
-            for(let i = 1; i <= 8; i++) {
-                for(let j = 1; j <= 3; j++) {
-                    let id = 't_' + catMap[i] + '_' + j;
-                    let el = document.getElementById(id);
-                    if(localStorage.getItem(id) === 'true') {
-                        completed++;
-                        if(el) {
-                            el.className = 'badge-unlocked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-black text-lg md:text-xl select-none transition-all transform pop';
-                            el.innerText = '🏅';
-                        }
-                    } else {
-                        if(el) {
-                            el.className = 'badge-locked w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-lg md:text-xl select-none';
-                            el.innerText = '🔒';
-                        }
-                    }
-                }
-            }
-            
-            document.getElementById('badge-count').innerText = completed;
-            document.getElementById('progress-text').innerText = `${completed} / 24`;
-            
-            let pct = (completed / 24) * 100;
-            document.getElementById('total-progress-bar').style.width = pct + '%';
-        }
-
-        function animateValue(id, start, end, duration) {
-            if (start === end) {
-                document.getElementById(id).innerHTML = `${end} <span class="text-xs md:text-sm text-indigo-200 font-bold">EXP</span>`;
-                return;
-            }
-            let range = end - start;
-            let current = start;
-            let increment = end > start ? Math.ceil(range / (duration/30)) : -1;
-            let stepTime = Math.abs(Math.floor(duration / range));
-            let obj = document.getElementById(id);
-            
-            let timer = setInterval(function() {
-                current += increment;
-                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                    current = end;
-                    clearInterval(timer);
-                }
-                obj.innerHTML = `${current} <span class="text-xs md:text-sm text-indigo-200 font-bold">EXP</span>`;
-            }, stepTime);
-        }
-
-        window.quickStart = function() {
-            for(let i = 1; i <= 8; i++) {
-                for(let j = 1; j <= 3; j++) {
-                    let id = 't_' + catMap[i] + '_' + j;
-                    if(localStorage.getItem(id) !== 'true') {
-                        window.saveAndGo(pagesMap[id]);
-                        return;
-                    }
-                }
-            }
-            notifyStudentAction('太強大了！你已經把所有 24 個模組都打通關了！', 'success');
-        };
-
-        window.saveAndGo = async function(url) {
-            if (window.StudentTools && typeof window.StudentTools.recordLastCourse === 'function') {
-                window.StudentTools.recordLastCourse(url);
-            }
-            const activeUser = sessionStorage.getItem('activeProfile');
-            if (activeUser && activeUser !== 'admin') {
-                await syncProgressWithDeadline(activeUser);
-            }
-            window.location.href = url;
-        };
-
-        window.resetAllProgress = async function() {
-            const activeUser = sessionStorage.getItem('activeProfile');
-            const confirmed = await confirmStudentAction({
-                title: '要清除所有學習進度嗎？',
-                message: '這項操作會覆蓋雲端資料，而且無法復原。請確認你已下載需要保留的備份。',
-                confirmLabel: '清除進度',
-                cancelLabel: '保留進度',
-                danger: true
-            });
-            if (!confirmed) return;
-            localStorage.clear();
-            if (activeUser && activeUser !== 'admin') {
-                await saveLocalToCloud(activeUser);
-            }
-            notifyStudentAction('當前帳戶紀錄已成功清除，頁面將重新載入。', 'success');
-            setTimeout(() => location.reload(), 900);
-        };
-
-        // ==========================================
-        // 🌟 老師專屬管理與班級能力分析後台邏輯
-        // ==========================================
-        window.showTeacherDashboard = function() {
-            document.getElementById('dashboard-screen').classList.add('hidden');
-            
-            const adminMode = document.getElementById('teacher-dashboard');
-            adminMode.classList.remove('hidden');
-            adminMode.classList.add('flex');
-            
-            window.fetchCloudDataForTeacher();
-        }
-
-        window.fetchCloudDataForTeacher = async function() {
-            if (!currentUserId) return alert("系統未連線！");
-            
-            const tbody = document.getElementById('teacher-table-body');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-indigo-600 font-bold"><span class="loader align-middle mr-2"></span>正在同步雲端全班學情數據...</td></tr>';
-            
-            try {
-                const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
-                const snapshot = await getDocs(colRef);
-                
-                let studentsList = [];
-                let classSkillsSum = { word: 0, sent: 0, rhet: 0, para: 0, read: 0, listen: 0, culture: 0, write: 0 };
-                let stagePassCounts = {};
-                for(let i = 1; i <= 8; i++) {
-                    for(let j = 1; j <= 3; j++) {
-                        stagePassCounts['t_' + catMap[i] + '_' + j] = 0;
-                    }
-                }
-
-                let studentCount = 0;
-
-                snapshot.forEach(docSnap => {
-                    if (docSnap.id !== 'admin') {
-                        let st = docSnap.data();
-                        studentsList.push(st);
-                        studentCount++;
-
-                        if (st.cats) {
-                            for (let sKey in classSkillsSum) {
-                                classSkillsSum[sKey] += st.cats[sKey] || 0;
-                            }
-                        }
-
-                        if (st.raw) {
-                            for (let sId in stagePassCounts) {
-                                if (st.raw[sId] === 'true') {
-                                    stagePassCounts[sId]++;
-                                }
-                            }
-                        }
-                    }
-                });
-
-                studentsList.sort((a, b) => (b.totalExp || 0) - (a.totalExp || 0));
-                
-                // 排行榜緩存
-                window.allStudentsCache = [...studentsList];
-                
-                document.getElementById('total-students-count').innerText = `雲端註冊人數：${studentsList.length} 人`;
-                
-                if (studentsList.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400 font-bold">目前雲端還沒有任何學生註冊喔！</td></tr>';
-                    document.getElementById('analysis-section').classList.add('hidden');
-                    return;
-                }
-
-                document.getElementById('analysis-section').classList.remove('hidden');
-                
-                tbody.innerHTML = '';
-                studentsList.forEach((st, idx) => {
-                    let totalExp = st.totalExp || 0;
-                    let badges = st.badges || 0;
-                    let realName = st.realName || st.username;
-                    
-                    // 最後活躍時間格式化
-                    let lastActiveTime = "無紀錄";
-                    if(st.lastUpdated) {
-                        try {
-                            const dateObj = new Date(st.lastUpdated);
-                            lastActiveTime = dateObj.toLocaleString('zh-HK', { hour12: false });
-                        } catch(e){
-                            lastActiveTime = st.lastUpdated;
-                        }
-                    }
-
-                    let level = Math.floor(totalExp / 500) + 1;
-                    let title = "語文見習生";
-                    if (level >= 4) title = "語文探索者";
-                    if (level >= 7) title = "語文小達人";
-                    if (level >= 10) title = "語文大師";
-                    if (level >= 15) title = "語文大宗師";
-                    if (level >= 20) title = "傳說級文豪";
-                    
-                    let rankIcon = idx + 1;
-                    if (idx === 0) rankIcon = '🥇';
-                    else if (idx === 1) rankIcon = '🥈';
-                    else if (idx === 2) rankIcon = '🥉';
-                    
-                    let pct = Math.round((badges / 24) * 100);
-
-                    tbody.innerHTML += `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition text-center">
-                            <td class="p-3 md:p-4 font-black text-lg md:text-xl">${rankIcon}</td>
-                            <td class="p-3 md:p-4 text-left font-black text-indigo-700 text-sm md:text-base">${realName} <br class="md:hidden"><span class="text-xs text-slate-400 font-normal md:ml-1">(${st.username})</span></td>
-                            <td class="p-3 md:p-4 text-orange-600 font-bold text-sm md:text-base">${totalExp}</td>
-                            <td class="p-3 md:p-4 flex flex-col md:flex-row justify-center items-center gap-1 md:gap-2">
-                                <span class="text-sm">${badges}/24</span>
-                                <div class="w-16 md:w-20 bg-slate-200 h-2 rounded-full overflow-hidden hidden sm:block">
-                                    <div class="bg-emerald-400 h-full" style="width: ${pct}%"></div>
-                                </div>
-                            </td>
-                            <td class="p-3 md:p-4 text-slate-500 text-xs md:text-sm">${lastActiveTime}</td>
-                            <td class="p-3 md:p-4 space-x-1">
-                                <button onclick="drilldownStudentDetail('${st.username}')" class="text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-600 px-2 py-1 rounded transition text-xs font-black shadow-sm">📊 詳情</button>
-                                <button onclick="deleteStudentData('${st.username}')" class="text-rose-500 hover:text-white hover:bg-rose-500 border border-rose-500 px-2 py-1 rounded transition text-xs font-black shadow-sm">❌ 刪除</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                renderClassSkillsUI(classSkillsSum, studentCount);
-                renderWarningStagesUI(stagePassCounts, studentCount);
-
-            } catch(e) {
-                console.error("讀取雲端失敗：", e);
-                tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-rose-500 font-bold">讀取失敗，請檢查網路連線。</td></tr>';
-            }
-        };
-
-        function renderClassSkillsUI(skillsSum, totalCount) {
-            const container = document.getElementById('class-skills-container');
-            container.innerHTML = '';
-
-            const skillNames = {
-                word: '字詞基礎', sent: '句子語法', rhet: '修辭標點', para: '段落實用',
-                read: '閱讀理解', listen: '聆聽與說', culture: '文化古詩', write: '綜合寫作'
-            };
-
-            for (let key in skillsSum) {
-                let average = Math.round(skillsSum[key] / totalCount);
-                let percent = Math.min(100, Math.round((average / 450) * 100)); 
-                let colorClass = percent >= 80 ? 'bg-emerald-500' : (percent >= 50 ? 'bg-amber-500' : 'bg-rose-500');
-
-                container.innerHTML += `
-                    <div class="flex flex-col items-center p-2 md:p-3 bg-slate-50 border rounded-2xl">
-                        <span class="text-xs font-bold text-slate-500 mb-1">${skillNames[key]}</span>
-                        <span class="text-lg md:text-xl font-black text-slate-800 mb-2">${percent}%</span>
-                        <div class="w-full bg-slate-200 h-2 md:h-3 rounded-full overflow-hidden">
-                            <div class="${colorClass} h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        function renderWarningStagesUI(passCounts, totalCount) {
-            const container = document.getElementById('warning-stages-container');
-            container.innerHTML = '';
-
-            const stageNamesMap = {
-                't_word_1': '字詞 (補底版)', 't_word_2': '字詞 (標準版)', 't_word_3': '字詞 (拔尖版)',
-                't_sent_1': '句子 (補底版)', 't_sent_2': '句子 (標準版)', 't_sent_3': '句子 (拔尖版)',
-                't_rhet_1': '修辭 (補底版)', 't_rhet_2': '修辭 (標準版)', 't_rhet_3': '修辭 (拔尖版)',
-                't_para_1': '段落 (補底版)', 't_para_2': '段落 (標準版)', 't_para_3': '段落 (拔尖版)',
-                't_read_1': '閱讀 (補底版)', 't_read_2': '閱讀 (標準版)', 't_read_3': '閱讀 (拔尖版)',
-                't_listen_1': '聆聽 (補底版)', 't_listen_2': '聆聽 (標準版)', 't_listen_3': '聆聽 (拔尖版)',
-                't_culture_1': '文化 (補底版)', 't_culture_2': '文化 (標準版)', 't_culture_3': '文化 (拔尖版)',
-                't_write_1': '寫作 (補底版)', 't_write_2': '寫作 (標準版)', 't_write_3': '寫作 (拔尖版)'
-            };
-
-            let list = [];
-            for (let sId in passCounts) {
-                let pct = totalCount === 0 ? 0 : Math.round((passCounts[sId] / totalCount) * 100);
-                list.push({ id: sId, name: stageNamesMap[sId], pct: pct });
-            }
-
-            list.sort((a, b) => a.pct - b.pct);
-            let worstThree = list.slice(0, 3);
-
-            worstThree.forEach(stage => {
-                container.innerHTML += `
-                    <div class="flex flex-col gap-1 p-2 md:p-3 bg-rose-50 border border-rose-100 rounded-2xl">
-                        <div class="flex justify-between text-xs md:text-sm font-bold text-rose-900">
-                            <span>🚨 ${stage.name}</span>
-                            <span>通過率 ${stage.pct}%</span>
-                        </div>
-                        <div class="w-full bg-slate-200 h-1.5 md:h-2 rounded-full overflow-hidden mt-1">
-                            <div class="bg-rose-500 h-full" style="width: ${stage.pct}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        // ==========================================
-        // 🌟 學生專屬個人詳情鑽取與 AI 分析 (Drill-down)
-        // ==========================================
-        window.drilldownStudentDetail = function(username) {
-            const student = window.allStudentsCache.find(s => s.username === username);
-            if (!student) return alert("找不到學生資料！");
-
-            document.getElementById('sd-realname').innerText = student.realName || student.username;
-            document.getElementById('sd-username').innerText = student.username;
-            document.getElementById('sd-exp').innerText = student.totalExp || 0;
-
-            const rawData = student.raw || {};
-
-            // 🤖 核心升級：AI 智能掃描作答陣列
-            let perfectCount = 0, hintCount = 0, wrongCount = 0;
-            let skillStats = {
-                '字詞基礎': { wrong: 0, total: 0 },
-                '句子語法': { wrong: 0, total: 0 },
-                '修辭標點': { wrong: 0, total: 0 },
-                '段落實用': { wrong: 0, total: 0 },
-                '閱讀理解': { wrong: 0, total: 0 },
-                '聆聽與說': { wrong: 0, total: 0 },
-                '文化古詩': { wrong: 0, total: 0 },
-                '綜合寫作': { wrong: 0, total: 0 }
-            };
-
-            const keyMap = {
-                'quest': '字詞基礎', 'stdQuest': '字詞基礎', 'advQuest': '字詞基礎',
-                'sent': '句子語法',
-                'rhet': '修辭標點',
-                'para': '段落實用',
-                'read': '閱讀理解',
-                'listen': '聆聽與說', 'speak': '聆聽與說',
-                'poem': '文化古詩', 'culture': '文化古詩',
-                'seq': '綜合寫作', 'fw': '綜合寫作', 'ex': '綜合寫作', 'tr': '綜合寫作'
-            };
-
-            for (let key in rawData) {
-                try {
-                    let parsed = JSON.parse(rawData[key]);
-                    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'number') {
-                        let matchedSkill = null;
-                        for (let prefix in keyMap) {
-                            if (key.toLowerCase().includes(prefix.toLowerCase())) {
-                                matchedSkill = keyMap[prefix];
-                                break;
-                            }
-                        }
-
-                        parsed.forEach(status => {
-                            if (status === 1 || status === 2 || status === -1) {
-                                if (status === 1) perfectCount++;
-                                else if (status === 2) hintCount++;
-                                else if (status === -1) wrongCount++;
-                                
-                                if (matchedSkill) {
-                                    skillStats[matchedSkill].total++;
-                                    if (status === -1) skillStats[matchedSkill].wrong++;
-                                }
-                            }
-                        });
-                    }
-                } catch(e) {}
-            }
-
-            document.getElementById('sd-perfect-count').innerText = perfectCount;
-            document.getElementById('sd-hint-count').innerText = hintCount;
-            document.getElementById('sd-wrong-count').innerText = wrongCount;
-
-            let totalAns = perfectCount + hintCount + wrongCount;
-            let perfectRate = totalAns > 0 ? Math.round((perfectCount / totalAns) * 100) : 0;
-            
-            let weakestSkill = "無";
-            let highestWrongRate = -1;
-            for (let sk in skillStats) {
-                if (skillStats[sk].total >= 3) { 
-                    let rate = skillStats[sk].wrong / skillStats[sk].total;
-                    if (rate > highestWrongRate) {
-                        highestWrongRate = rate;
-                        weakestSkill = sk;
-                    }
-                }
-            }
-
-            let aiReport = "";
-            if (totalAns === 0) {
-                aiReport = "該生目前尚未開始進行任何具體題目的作答，建議提醒學生進入各模組完成任務。";
-            } else {
-                aiReport = `該生共進行了 <strong>${totalAns}</strong> 次有效答題。其中 <strong>一次答對率為 ${perfectRate}%</strong>。`;
-                if (highestWrongRate > 0.15) {
-                    aiReport += `<br><br><span class="text-rose-600">⚠️ <strong>弱項警告：</strong></span> 根據大數據分析，該生在「<strong>${weakestSkill}</strong>」環節的失誤率最高（達 ${Math.round(highestWrongRate * 100)}%）。建議後續針對此範疇進行補底與加強特訓。`;
-                } else {
-                    aiReport += `<br><br><span class="text-emerald-600">✨ <strong>綜合評價：</strong></span> 該生目前表現非常優異，各項能力發展均衡，沒有明顯的弱點，請繼續保持優良的學習狀態！`;
-                }
-            }
-            document.getElementById('sd-ai-report').innerHTML = aiReport;
-
-            // 渲染八大能力分析
-            const skillContainer = document.getElementById('sd-skills-container');
-            skillContainer.innerHTML = '';
-            const skillNames = {
-                word: '字詞基礎', sent: '句子語法', rhet: '修辭標點', para: '段落實用',
-                read: '閱讀理解', listen: '聆聽與說', culture: '文化古詩', write: '綜合寫作'
-            };
-
-            const cats = student.cats || {};
-            for(let key in skillNames) {
-                let score = cats[key] || 0;
-                let percent = Math.min(100, Math.round((score / 450) * 100)); // 假設450為精通標準
-                let colorClass = percent >= 80 ? 'bg-emerald-500' : (percent >= 50 ? 'bg-amber-500' : 'bg-rose-500');
-                
-                skillContainer.innerHTML += `
-                    <div class="flex flex-col p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-1 text-sm font-bold">
-                            <span class="text-slate-600">${skillNames[key]}</span>
-                            <span class="text-slate-800">${score} EXP (${percent}%)</span>
-                        </div>
-                        <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                            <div class="${colorClass} h-full rounded-full transition-all" style="width: ${percent}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // 渲染 24 關卡精通狀態
-            const badgeContainer = document.getElementById('sd-badges-container');
-            badgeContainer.innerHTML = '';
-            
-            const badgeNamesMap = {
-                't_word_1': '字詞 (補底)', 't_word_2': '字詞 (標準)', 't_word_3': '字詞 (拔尖)',
-                't_sent_1': '句子 (補底)', 't_sent_2': '句子 (標準)', 't_sent_3': '句子 (拔尖)',
-                't_rhet_1': '修辭 (補底)', 't_rhet_2': '修辭 (標準)', 't_rhet_3': '修辭 (拔尖)',
-                't_para_1': '段落 (補底)', 't_para_2': '段落 (標準)', 't_para_3': '段落 (拔尖)',
-                't_read_1': '閱讀 (補底)', 't_read_2': '閱讀 (標準)', 't_read_3': '閱讀 (拔尖)',
-                't_listen_1': '聆聽 (補底)', 't_listen_2': '聆聽 (標準)', 't_listen_3': '聆聽 (拔尖)',
-                't_culture_1': '文化 (補底)', 't_culture_2': '文化 (標準)', 't_culture_3': '文化 (拔尖)',
-                't_write_1': '寫作 (補底)', 't_write_2': '寫作 (標準)', 't_write_3': '寫作 (拔尖)'
-            };
-
-            for(let key in badgeNamesMap) {
-                const isPassed = rawData[key] === 'true';
-                const statusIcon = isPassed ? '<span class="text-emerald-500">🏅 已精通</span>' : '<span class="text-slate-300">🔒 未解鎖</span>';
-                const borderClass = isPassed ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white';
-                badgeContainer.innerHTML += `
-                    <div class="border rounded-xl p-2.5 flex items-center justify-between text-xs font-bold ${borderClass}">
-                        <span class="text-slate-700">${badgeNamesMap[key]}</span>
-                        <span>${statusIcon}</span>
-                    </div>
-                `;
-            }
-
-            // 開啟 Modal
-            const modal = document.getElementById('student-detail-modal');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.querySelector('.transform').classList.remove('scale-95');
-            }, 10);
-        };
-
-        window.closeStudentDetailModal = function() {
-            const modal = document.getElementById('student-detail-modal');
-            modal.querySelector('.transform').classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 200);
-        };
-
-        // ==========================================
-        // 🌟 新增：一鍵 CSV 數據報表下載
-        // ==========================================
-        window.exportRankingToCSV = function() {
-            if (!window.allStudentsCache || window.allStudentsCache.length === 0) {
-                alert("目前無數據可供匯出，請先點擊更新數據！");
-                return;
-            }
-
-            let csvContent = "\uFEFF"; // 避免 Excel 中文亂碼
-            csvContent += "排名,姓名,登入帳號,總經驗值(EXP),精通關卡數(滿分24),字詞得分,句子得分,修辭得分,段落得分,閱讀得分,聆聽得分,文化古詩得分,綜合寫作得分,最後在線時間\n";
-
-            window.allStudentsCache.forEach((st, idx) => {
-                let realName = st.realName || st.username;
-                let lastActiveTime = "無紀錄";
-                if(st.lastUpdated) {
-                    try {
-                        lastActiveTime = new Date(st.lastUpdated).toLocaleString('zh-HK', { hour12: false });
-                    } catch(e){}
-                }
-                
-                let cats = st.cats || {};
-                let row = [
-                    idx + 1,
-                    `"${realName}"`,
-                    `"${st.username}"`,
-                    st.totalExp || 0,
-                    st.badges || 0,
-                    cats.word || 0,
-                    cats.sent || 0,
-                    cats.rhet || 0,
-                    cats.para || 0,
-                    cats.read || 0,
-                    cats.listen || 0,
-                    cats.culture || 0,
-                    cats.write || 0,
-                    `"${lastActiveTime}"`
-                ];
-                csvContent += row.join(",") + "\n";
-            });
-
-            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", `小學語文特訓平台_班級成績報表_${new Date().toLocaleDateString()}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
-
-        window.deleteStudentData = async function(username) {
-            if (confirm(`⚠️ 警告：確定要從雲端徹底刪除學生「${username}」的帳戶和所有進度嗎？此操作無法復原！`)) {
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', username);
-                    await deleteDoc(docRef);
-                    alert("已成功刪除該學生資料！");
-                    window.fetchCloudDataForTeacher();
-                } catch(e) {
-                    console.error("刪除失敗", e);
-                    alert("刪除失敗，請重試！");
-                }
-            }
-        };
-
-    </script>
-    <script src="student-tools.js"></script>
+    </section>
+  </main>
+  <footer class="border-t border-slate-200 bg-white px-4 py-5 text-center text-sm font-bold text-slate-500">JCMKEC 小學中國語文題庫・直接遊玩版</footer>
 </body>
 </html>

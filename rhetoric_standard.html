@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>修辭與標點 - 標準常規訓練</title>
@@ -119,7 +120,7 @@
 
     <script>
         // ================= 1. 核心狀態與輔助函數 =================
-        let stdExp = parseInt(localStorage.getItem('rhetStdExp')) || 0;
+        let stdExp = parseInt(window.__jcmkecSessionStore.getItem('rhetStdExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -265,7 +266,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[categoryId];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         };
 
         window.closeTutorial = function() {
@@ -490,7 +491,7 @@
             ...window.formatData(structPool, 'r-rhet-struct', '句型辨析：這句話運用了哪種修辭手法？')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('rhetStdProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('rhetStdProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         window.renderDirectory = function() {
             const dirContainer = document.getElementById('directory-content');
@@ -555,7 +556,7 @@
             const qData = rawQuestDataObj[idx];
             const qType = qData.category;
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + qType)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + qType)) {
                 pendingQuestionIdx = idx; 
                 window.showTutorial(qType);      
                 return;                   
@@ -660,7 +661,7 @@
 
                 if (expGained > 0) {
                     stdExp += expGained;
-                    localStorage.setItem('rhetStdExp', stdExp);
+                    window.__jcmkecSessionStore.setItem('rhetStdExp', stdExp);
                     document.getElementById('exp-display').innerText = stdExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -668,7 +669,7 @@
 
                 if (finalStatus === 1 || previousStatus !== 1) {
                     userProgress[currentQuestionIdx] = finalStatus;
-                    localStorage.setItem('rhetStdProgress', JSON.stringify(userProgress));
+                    window.__jcmkecSessionStore.setItem('rhetStdProgress', JSON.stringify(userProgress));
                 }
 
                 let modalIcon = finalStatus === 1 ? '🌟' : '✅';
@@ -693,7 +694,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('rhetStdProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetStdProgress', JSON.stringify(userProgress));
                 
                 // 找出被點擊選項的解釋
                 let lines = qData.explanation.split('<br>');

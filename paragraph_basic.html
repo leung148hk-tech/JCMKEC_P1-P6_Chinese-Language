@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>段落與實用文 - 基礎訓練</title>
@@ -138,7 +139,7 @@
 
     <script>
         // ================= 1. 核心狀態與大腦字典 =================
-        let paraExp = parseInt(localStorage.getItem('paraBasicExp')) || 0;
+        let paraExp = parseInt(window.__jcmkecSessionStore.getItem('paraBasicExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -267,7 +268,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[categoryId];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         };
 
         window.closeTutorial = function() {
@@ -544,11 +545,11 @@
             ...formatPracticalReorderData(practicalReorderPool, 'p-practical-reorder', '全文格式重組：把實用文段落拼砌成符合格式的完整文章。')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('paraBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
-        let paragraphIncompleteOnly = localStorage.getItem('paraBasicIncompleteOnly') === 'true';
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('paraBasicProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let paragraphIncompleteOnly = window.__jcmkecSessionStore.getItem('paraBasicIncompleteOnly') === 'true';
 
         window.getParagraphResumeIdx = function() {
-            const lastIdx = Number(localStorage.getItem('paraBasicLastQuestionIdx'));
+            const lastIdx = Number(window.__jcmkecSessionStore.getItem('paraBasicLastQuestionIdx'));
             if (Number.isInteger(lastIdx) && lastIdx >= 0 && lastIdx < rawQuestDataObj.length && userProgress[lastIdx] !== 1 && userProgress[lastIdx] !== 2) return lastIdx;
             return userProgress.findIndex(status => status !== 1 && status !== 2);
         };
@@ -570,7 +571,7 @@
 
         window.toggleParagraphIncompleteFilter = function() {
             paragraphIncompleteOnly = !paragraphIncompleteOnly;
-            localStorage.setItem('paraBasicIncompleteOnly', String(paragraphIncompleteOnly));
+            window.__jcmkecSessionStore.setItem('paraBasicIncompleteOnly', String(paragraphIncompleteOnly));
             window.renderDirectory();
         };
 
@@ -660,7 +661,7 @@
             else if (qType.includes('diary')) tutId = 'p-practical-diary';
             else if (qType.includes('practical-reorder')) tutId = 'p-practical-reorder';
 
-            if (!forceStart && !localStorage.getItem('tut_seen_' + tutId)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + tutId)) {
                 pendingQuestionIdx = idx; 
                 window.showTutorial(tutId);      
                 return;                   
@@ -668,7 +669,7 @@
 
             currentQuestionMistakes = 0; 
             currentQuestionIdx = idx;
-            localStorage.setItem('paraBasicLastQuestionIdx', String(idx));
+            window.__jcmkecSessionStore.setItem('paraBasicLastQuestionIdx', String(idx));
             window.currentHints = []; 
             
             let hintBox = document.getElementById('dynamic-hint-box');
@@ -867,7 +868,7 @@
             } else if (reorderTarget.length === reorderCorrect.length) {
                 currentQuestionMistakes++;
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('paraBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('paraBasicProgress', JSON.stringify(userProgress));
                 
                 let chunksToReturn = reorderTarget.splice(correctCount);
                 for (let chunk of chunksToReturn) {
@@ -916,7 +917,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('paraBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('paraBasicProgress', JSON.stringify(userProgress));
                 
                 let lines = qData.explanation.split('<br>');
                 let matchedLine = lines.find(l => l.includes(clickedOptText));
@@ -953,7 +954,7 @@
 
             if (expGained > 0) {
                 paraExp += expGained;
-                localStorage.setItem('paraBasicExp', paraExp);
+                window.__jcmkecSessionStore.setItem('paraBasicExp', paraExp);
                 document.getElementById('exp-display').innerText = paraExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -961,7 +962,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentQuestionIdx] = finalStatus;
-                localStorage.setItem('paraBasicProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('paraBasicProgress', JSON.stringify(userProgress));
             }
 
             let modalIcon = finalStatus === 1 ? '🌟' : '✅';

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中華文化與古詩 - SEN基礎訓練</title>
@@ -148,7 +149,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let cultureExp = parseInt(localStorage.getItem('cultureBasicExp')) || 0;
+        let cultureExp = parseInt(window.__jcmkecSessionStore.getItem('cultureBasicExp')) || 0;
         document.getElementById('exp-display').innerText = cultureExp;
         
         let currentMode = 'poem'; 
@@ -322,7 +323,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -528,8 +529,8 @@
             ])
         ];
 
-        let poemProgress = JSON.parse(localStorage.getItem('poemBasicProgress')) || new Array(poemData.length).fill(0);
-        let cultureProgress = JSON.parse(localStorage.getItem('cultureBasicProgress')) || new Array(cultureData.length).fill(0);
+        let poemProgress = JSON.parse(window.__jcmkecSessionStore.getItem('poemBasicProgress')) || new Array(poemData.length).fill(0);
+        let cultureProgress = JSON.parse(window.__jcmkecSessionStore.getItem('cultureBasicProgress')) || new Array(cultureData.length).fill(0);
 
         function renderPoemDirectory() {
             const dirContainer = document.getElementById('poem-content');
@@ -556,7 +557,7 @@
         }
 
         function startPoem(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-poem')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-poem')) {
                 pendingTaskIdx = idx; pendingTaskType = 'poem'; showTutorial('t-poem'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -621,7 +622,7 @@
         }
 
         function startCulture(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-culture')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-culture')) {
                 pendingTaskIdx = idx; pendingTaskType = 'culture'; showTutorial('t-culture'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -755,11 +756,11 @@
                         
                         if (progArr[currentIdx] !== 1) {
                             cultureExp += expGained;
-                            localStorage.setItem('cultureBasicExp', cultureExp);
+                            window.__jcmkecSessionStore.setItem('cultureBasicExp', cultureExp);
                             document.getElementById('exp-display').innerText = cultureExp;
                             progArr[currentIdx] = 1;
-                            if(type==='poem') localStorage.setItem('poemBasicProgress', JSON.stringify(progArr));
-                            else localStorage.setItem('cultureBasicProgress', JSON.stringify(progArr));
+                            if(type==='poem') window.__jcmkecSessionStore.setItem('poemBasicProgress', JSON.stringify(progArr));
+                            else window.__jcmkecSessionStore.setItem('cultureBasicProgress', JSON.stringify(progArr));
                         }
                         
                         document.getElementById('feedback-desc').innerText = `太厲害了！你完成了這篇的 5 道挑戰題！\n✨ 獲得 ${expGained} 經驗值`;
@@ -802,7 +803,7 @@
             if (pb) pb.style.width = percent + '%';
             
             // 首頁連動
-            if(pDone === 10 && cDone === 10) localStorage.setItem('t_culture_1', 'true');
+            if(pDone === 10 && cDone === 10) window.__jcmkecSessionStore.setItem('t_culture_1', 'true');
         }
 
         function backToDirectoryFromFinish() {

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>綜合寫作專區 - 拔尖思維特訓</title>
@@ -197,7 +198,7 @@
 
     <script>
         // ================= 1. 全域變數定義 & 狀態庫 =================
-        let writeExp = parseInt(localStorage.getItem('writeAdvExp_v2')) || 0;
+        let writeExp = parseInt(window.__jcmkecSessionStore.getItem('writeAdvExp_v2')) || 0;
         let currentMode = 'vocab', currentIdx = -1, currentSubTask = 0, currentMistakes = 0;
         let reorderSource = [], targetSlots = [], reorderCorrect = [], lockedSlots = [], wrongSlots = []; 
         let vocabPhase = 1, selectedWordIdx = null, selectedMeanIdx = null, currentVocabSentIdx = 0;
@@ -268,7 +269,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + type, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + type, 'true');
         };
 
         window.closeTutorial = function() {
@@ -625,7 +626,7 @@
             }
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('writeAdvProgress_v11')) || { vocab: new Array(vocabData.length).fill(0), analyze: new Array(analyzeData.length).fill(0), outline: new Array(outlineData.length).fill(0), trans: new Array(transData.length).fill(0), write: new Array(writeData.length).fill(0), edit: new Array(editData.length).fill(0) };
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('writeAdvProgress_v11')) || { vocab: new Array(vocabData.length).fill(0), analyze: new Array(analyzeData.length).fill(0), outline: new Array(outlineData.length).fill(0), trans: new Array(transData.length).fill(0), write: new Array(writeData.length).fill(0), edit: new Array(editData.length).fill(0) };
         
         window.updateTotalProgress = function() {
             let solved = 0;
@@ -642,7 +643,7 @@
             if (pb) pb.style.width = percent + '%';
         };
 
-        window.saveProgress = function() { localStorage.setItem('writeAdvProgress_v11', JSON.stringify(userProgress)); window.updateTotalProgress(); };
+        window.saveProgress = function() { window.__jcmkecSessionStore.setItem('writeAdvProgress_v11', JSON.stringify(userProgress)); window.updateTotalProgress(); };
 
         // ================= 4. 各功能模組之主目錄及挑戰 UI 渲染邏輯 =================
         window.renderVocabDirectory = function() {
@@ -656,7 +657,7 @@
         };
 
         window.startVocab = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_vocab')) { pendingIdx = idx; pendingType = 'vocab'; window.showTutorial('vocab'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_vocab')) { pendingIdx = idx; pendingType = 'vocab'; window.showTutorial('vocab'); return; }
             currentIdx = idx; currentMistakes = 0; vocabPhase = 1;
             let words = vocabData[idx].pairs.map((p, i) => ({ text: p.word, key: i })).sort(() => Math.random() - 0.5);
             let means = vocabData[idx].pairs.map((p, i) => ({ text: p.mean, key: i })).sort(() => Math.random() - 0.5);
@@ -760,7 +761,7 @@
 
         window.finishVocabLevel = function() {
             const data = vocabData[currentIdx]; userProgress.vocab[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalHtml = `<div class="title">🔓 詞彙彈藥庫完全解鎖</div><div class="space-y-4 mt-4">${data.pairs.map(p => `<p class="text-left font-bold m-0 p-0 leading-loose" style="text-indent:0;"><span class="text-purple-600 text-2xl mr-2">【${p.word}】</span>：${p.mean}</p>`).join('')}</div>`;
             document.getElementById('feedback-exp-text').className = "text-purple-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').innerHTML = `💡 總結：${data.exp}`; document.getElementById('feedback-desc').className = "bg-purple-50 border border-purple-200 text-purple-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -780,7 +781,7 @@
         };
 
         window.startAnalyze = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_analyze')) { pendingIdx = idx; pendingType = 'analyze'; window.showTutorial('analyze'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_analyze')) { pendingIdx = idx; pendingType = 'analyze'; window.showTutorial('analyze'); return; }
             currentIdx = idx; currentMistakes = 0; const data = analyzeData[idx];
             document.getElementById('analyze-directory').style.display = 'none'; const playArea = document.getElementById('analyze-play'); playArea.style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             let combinedSentences = []; let sentences = data.text.split(/([。！？])/).filter(Boolean);
@@ -845,7 +846,7 @@
 
         window.finishAnalyzeLevel = function() {
             const data = analyzeData[currentIdx]; userProgress.analyze[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalStoryHtml = `<div class="title">${data.title}</div><p>${data.text.replace(/【.*?】/g, '').replace(/\[.*?\]/g, '')}</p>`;
             document.getElementById('feedback-exp-text').className = "text-blue-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-blue-50 border border-blue-200 text-blue-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${data.exp}`; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -866,7 +867,7 @@
         };
 
         window.startOutline = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_outline')) { pendingIdx = idx; pendingType = 'outline'; window.showTutorial('outline'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_outline')) { pendingIdx = idx; pendingType = 'outline'; window.showTutorial('outline'); return; }
             currentIdx = idx; currentMistakes = 0; const data = outlineData[idx]; window.initReorderState(data.chunks);
             document.getElementById('outline-directory').style.display = 'none'; document.getElementById('outline-play').style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             window.renderOutlineUI();
@@ -894,7 +895,7 @@
 
         window.advanceOutlinePhase = function() {
             const data = outlineData[currentIdx]; userProgress.outline[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalHtml = `<div class="title">${data.title} 寫作骨架</div><div class="space-y-3 mt-4 p-4">${reorderCorrect.map(p => `<p class="text-left font-bold text-slate-700 leading-loose m-0" style="text-indent:0;">${p.replace(/【.*?】/g, '')}</p>`).join('')}</div>`;
             document.getElementById('feedback-exp-text').className = "text-amber-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-amber-50 border border-amber-200 text-amber-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${data.exp}`; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -915,7 +916,7 @@
         };
 
         window.startTrans = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_trans')) { pendingIdx = idx; pendingType = 'trans'; window.showTutorial('trans'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_trans')) { pendingIdx = idx; pendingType = 'trans'; window.showTutorial('trans'); return; }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0; const stage = transData[idx].stages[0]; window.initReorderState(stage.chunks);
             document.getElementById('trans-directory').style.display = 'none'; document.getElementById('trans-play').style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             window.renderTransUI();
@@ -951,7 +952,7 @@
             const data = transData[currentIdx]; const stage = data.stages[currentSubTask];
             let finalStoryHtml = `<div class="title">${data.title}</div>`;
             if (stage.type.startsWith('para')) { finalStoryHtml += `<p>${reorderCorrect.join('')}</p>`; } else { finalStoryHtml += `<p>${stage.p1}</p><div class="trans-text text-amber-600">${reorderCorrect.map(c => `<span class="text-amber-600 font-bold">${c}</span>`).join('')}</div><p>${stage.p2}</p>`; }
-            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             document.getElementById('feedback-exp-text').className = "text-amber-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${expGained} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-amber-50 border border-amber-200 text-amber-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${stage.exp || stage.hint || '重組正確'}`; document.getElementById('feedback-desc').classList.remove('hidden');
             document.getElementById('feedback-story').innerHTML = finalStoryHtml; document.getElementById('feedback-essay-container').className = "flex flex-col shadow-md rounded-xl overflow-hidden border-2 border-amber-200 flex-shrink-0 w-full"; document.getElementById('feedback-essay-container').classList.remove('hidden');
@@ -977,7 +978,7 @@
         };
 
         window.startWrite = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_write')) { pendingIdx = idx; pendingType = 'write'; window.showTutorial('write'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_write')) { pendingIdx = idx; pendingType = 'write'; window.showTutorial('write'); return; }
             currentIdx = idx; currentSubTask = 0; currentMistakes = 0; const stage = writeData[idx].stages[0]; window.initReorderState(stage.chunks);
             document.getElementById('write-directory').style.display = 'none'; document.getElementById('write-play').style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             window.renderWriteUI();
@@ -1011,7 +1012,7 @@
             const data = writeData[currentIdx]; const stage = data.stages[currentSubTask];
             let finalStoryHtml = `<div class="title">${data.title}</div>`;
             if (currentSubTask === 0 || currentSubTask === 1) { finalStoryHtml += `<p>${reorderCorrect.map(p => p.replace(/【.*?】/g, '').replace(/\[.*?\]/g, '')).join('')}</p>`; } else { reorderCorrect.forEach(p => { finalStoryHtml += `<p>${p.replace(/【.*?】/g, '').replace(/\[.*?\]/g, '')}</p>`; }); }
-            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let expGained = currentMistakes === 0 ? 10 : 5; writeExp += expGained; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             document.getElementById('feedback-exp-text').className = "text-purple-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${expGained} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-purple-50 border border-purple-200 text-purple-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${stage.exp || stage.hint || '重組正確'}`; document.getElementById('feedback-desc').classList.remove('hidden');
             document.getElementById('feedback-story').innerHTML = finalStoryHtml; document.getElementById('feedback-essay-container').className = "flex flex-col shadow-md rounded-xl overflow-hidden border-2 border-purple-200 flex-shrink-0 w-full"; document.getElementById('feedback-essay-container').classList.remove('hidden');
@@ -1035,7 +1036,7 @@
         };
 
         window.startEdit = function(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_edit')) { pendingIdx = idx; pendingType = 'edit'; window.showTutorial('edit'); return; }
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_edit')) { pendingIdx = idx; pendingType = 'edit'; window.showTutorial('edit'); return; }
             currentIdx = idx; currentMistakes = 0; editCorrectCount = 0; const data = editData[idx];
             document.getElementById('edit-directory').style.display = 'none'; const playArea = document.getElementById('edit-play'); playArea.style.display = 'flex'; document.getElementById('main-scroll-area').scrollTop = 0;
             let textHtml = data.badText; data.targets.forEach((t, tIdx) => { textHtml = textHtml.replace(t.wrong, `<span id="edit-target-${tIdx}" onclick="window.clickEditTarget(${tIdx})" class="bg-amber-100 border-b-2 border-dashed border-amber-500 px-1 py-0.5 cursor-pointer font-bold text-amber-950 hover:bg-amber-200 transition duration-200">${t.wrong}</span>`); });
@@ -1083,7 +1084,7 @@
 
         window.finishEditLevel = function() {
             const data = editData[currentIdx]; userProgress.edit[currentIdx] = currentMistakes === 0 ? 1 : 2; window.saveProgress();
-            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; localStorage.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
+            let bonusExp = currentMistakes === 0 ? 20 : 10; writeExp += bonusExp; window.__jcmkecSessionStore.setItem('writeAdvExp_v2', writeExp); updateExpDisplay();
             let finalText = data.badText; data.targets.forEach(t => { if (t.right !== "無須修改") finalText = finalText.replace(t.wrong, t.right); });
             document.getElementById('feedback-exp-text').className = "text-purple-600 font-bold text-xl mb-4"; document.getElementById('feedback-exp-text').innerText = `獲得 ${bonusExp} 點經驗值 ✨`;
             document.getElementById('feedback-desc').className = "bg-purple-50 border border-purple-200 text-purple-900 text-left text-base leading-loose p-4 rounded-xl mt-4 font-bold block flex-shrink-0"; document.getElementById('feedback-desc').innerHTML = `💡 解析：${data.exp}`; document.getElementById('feedback-desc').classList.remove('hidden');
@@ -1130,7 +1131,7 @@
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
             setTimeout(() => { window.speakFullStory(); }, 800);
             if (userProgress.vocab.filter(p=>p>0).length===vocabData.length && userProgress.analyze.filter(p=>p>0).length===analyzeData.length && userProgress.outline.filter(p=>p>0).length===outlineData.length && userProgress.trans.filter(p=>p>0).length===transData.length && userProgress.write.filter(p=>p>0).length===writeData.length && userProgress.edit.filter(p=>p>0).length===editData.length) {
-                localStorage.setItem('t_write_3', 'true');
+                window.__jcmkecSessionStore.setItem('t_write_3', 'true');
             }
         };
 

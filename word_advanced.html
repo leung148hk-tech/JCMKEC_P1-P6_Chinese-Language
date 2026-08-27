@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>字詞擴充挑戰 - 拔尖訓練</title>
@@ -200,7 +201,7 @@
 
     <script>
         // ================= 1. 核心狀態與輔助函數 =================
-        let advExp = parseInt(localStorage.getItem('advExp')) || 0;
+        let advExp = parseInt(window.__jcmkecSessionStore.getItem('advExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -284,7 +285,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         };
 
         window.closeTutorial = function() {
@@ -574,7 +575,7 @@
             ...formatData(advSynonymPool, 'c-adv-synonym', '辨析高級近義詞，選出語境中最精確的詞語。')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('advQuestProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('advQuestProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         function renderDirectory() {
             const dirContainer = document.getElementById('directory-content');
@@ -635,7 +636,7 @@
             const qData = rawQuestDataObj[idx];
             const qType = qData.category;
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + qType)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + qType)) {
                 pendingQuestionIdx = idx; 
                 window.showTutorial(qType);      
                 return;                   
@@ -740,7 +741,7 @@
 
                 if (expGained > 0) {
                     advExp += expGained;
-                    localStorage.setItem('advExp', advExp);
+                    window.__jcmkecSessionStore.setItem('advExp', advExp);
                     document.getElementById('exp-display').innerText = advExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -748,7 +749,7 @@
 
                 if (finalStatus === 1 || previousStatus !== 1) {
                     userProgress[currentQuestionIdx] = finalStatus;
-                    localStorage.setItem('advQuestProgress', JSON.stringify(userProgress));
+                    window.__jcmkecSessionStore.setItem('advQuestProgress', JSON.stringify(userProgress));
                 }
 
                 let modalIcon = finalStatus === 1 ? '🌟' : '✅';
@@ -771,7 +772,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('advQuestProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('advQuestProgress', JSON.stringify(userProgress));
                 
                 // 🌟 智能鷹架微提示
                 let newHint = window.getSubtleHint(qData.category, qData.explanation);
@@ -916,7 +917,7 @@
                     fb.className = "mt-4 text-xl font-bold text-purple-600 h-8 transition-opacity opacity-100 pop";
                     window.speakText("書寫精確！");
                     advExp += 5;
-                    localStorage.setItem('advExp', advExp);
+                    window.__jcmkecSessionStore.setItem('advExp', advExp);
                     document.getElementById('exp-display').innerText = advExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
