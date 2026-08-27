@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聆聽與說話 - 標準常規特訓</title>
@@ -138,7 +139,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let stdExp = parseInt(localStorage.getItem('listenStandardExp')) || 0;
+        let stdExp = parseInt(window.__jcmkecSessionStore.getItem('listenStandardExp')) || 0;
         document.getElementById('exp-display').innerText = stdExp;
         
         let currentMode = 'listen'; 
@@ -230,7 +231,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -388,7 +389,7 @@
             }
         ];
 
-        let listenProgress = JSON.parse(localStorage.getItem('listenStandardProgress')) || new Array(listenData.length).fill(0);
+        let listenProgress = JSON.parse(window.__jcmkecSessionStore.getItem('listenStandardProgress')) || new Array(listenData.length).fill(0);
 
         function renderListenDirectory() {
             const dirContainer = document.getElementById('listen-content');
@@ -417,7 +418,7 @@
         }
 
         function startListen(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-infer')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-infer')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'listen';
                 showTutorial('t-infer');
@@ -500,10 +501,10 @@
                     } else {
                         if (listenProgress[currentStoryIdx] !== 1) {
                             stdExp += 30;
-                            localStorage.setItem('listenStandardExp', stdExp);
+                            window.__jcmkecSessionStore.setItem('listenStandardExp', stdExp);
                             document.getElementById('exp-display').innerText = stdExp;
                             listenProgress[currentStoryIdx] = 1;
-                            localStorage.setItem('listenStandardProgress', JSON.stringify(listenProgress));
+                            window.__jcmkecSessionStore.setItem('listenStandardProgress', JSON.stringify(listenProgress));
                         }
                         
                         document.getElementById('feedback-desc').innerText = "你成功聽出了所有的弦外之音！獲得 30 EXP！";
@@ -550,7 +551,7 @@
             { e: ['🚴‍♂️🏞️', '🪨💥', '🤕🩹', '🤝😊'], t: '互助的友誼', sample: '首先，大雄和胖虎一起去公園騎單車。接著，大雄不小心撞到石頭跌倒了。然後，胖虎立刻停下來，幫大雄貼上膠布包紮傷口。最後，他們握手言和，友誼變得更加深厚了。' }
         ];
 
-        let speakProgress = JSON.parse(localStorage.getItem('speakStandardProgress')) || new Array(speakData.length).fill(0);
+        let speakProgress = JSON.parse(window.__jcmkecSessionStore.getItem('speakStandardProgress')) || new Array(speakData.length).fill(0);
 
         function renderSpeakDirectory() {
             const dirContainer = document.getElementById('speak-content');
@@ -573,7 +574,7 @@
         }
 
         function startSpeak(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-connect')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-connect')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'speak';
                 showTutorial('t-connect');
@@ -643,17 +644,17 @@
             stopStoryTTS();
             if (speakProgress[currentStoryIdx] !== 1) {
                 stdExp += 20;
-                localStorage.setItem('listenStandardExp', stdExp);
+                window.__jcmkecSessionStore.setItem('listenStandardExp', stdExp);
                 document.getElementById('exp-display').innerText = stdExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
                 
                 speakProgress[currentStoryIdx] = 1;
-                localStorage.setItem('speakStandardProgress', JSON.stringify(speakProgress));
+                window.__jcmkecSessionStore.setItem('speakStandardProgress', JSON.stringify(speakProgress));
                 showToast("口語練習完成！+20 EXP");
                 
                 if (listenProgress.filter(p=>p===1).length === listenData.length && speakProgress.filter(p=>p===1).length === speakData.length) {
-                    localStorage.setItem('t_listen_2', 'true');
+                    window.__jcmkecSessionStore.setItem('t_listen_2', 'true');
                 }
             }
             switchMode('speak');

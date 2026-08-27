@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>閱讀理解 - 標準推論特訓</title>
@@ -222,7 +223,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音引擎 =================
-        let readExp = parseInt(localStorage.getItem('readStandardExp')) || 0;
+        let readExp = parseInt(window.__jcmkecSessionStore.getItem('readStandardExp')) || 0;
         document.getElementById('exp-display').innerText = readExp;
         
         let currentPassageIdx = -1;
@@ -406,7 +407,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -731,7 +732,7 @@
             }
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('readStandardProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('readStandardProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         function renderDirectory() {
             const dirContainer = document.getElementById('directory-content');
@@ -779,7 +780,7 @@
         function startPassage(idx, forceStart = false) {
             const passage = rawQuestDataObj[idx];
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + passage.tut)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + passage.tut)) {
                 currentPassageIdx = idx; 
                 showTutorial(passage.tut);
                 return;
@@ -853,7 +854,7 @@
                 else readExp += 5;
 
                 document.getElementById('exp-display').innerText = readExp;
-                localStorage.setItem('readStandardExp', readExp);
+                window.__jcmkecSessionStore.setItem('readStandardExp', readExp);
 
                 document.getElementById('feedback-desc').innerHTML = `<span class="bg-indigo-50 p-4 rounded-xl block border border-indigo-100 text-indigo-900">${qData.exp}</span>`;
                 
@@ -929,7 +930,7 @@
 
             if (expGained > 0) {
                 readExp += expGained;
-                localStorage.setItem('readStandardExp', readExp);
+                window.__jcmkecSessionStore.setItem('readStandardExp', readExp);
                 document.getElementById('exp-display').innerText = readExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -937,7 +938,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentPassageIdx] = finalStatus;
-                localStorage.setItem('readStandardProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('readStandardProgress', JSON.stringify(userProgress));
             }
 
             let expMsg = expGained > 0 
@@ -956,7 +957,7 @@
             }, 10);
             
             if(userProgress.filter(p => p > 0).length === rawQuestDataObj.length) {
-                localStorage.setItem('t_read_2', 'true');
+                window.__jcmkecSessionStore.setItem('t_read_2', 'true');
             }
         }
 

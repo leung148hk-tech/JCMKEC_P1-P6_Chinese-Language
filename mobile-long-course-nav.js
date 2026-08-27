@@ -59,7 +59,7 @@
     if (!items.length) return;
     const completed = items.filter(isComplete).length;
     const next = items.find(item => !isComplete(item));
-    const onlyIncomplete = localStorage.getItem(storageKey(config, 'onlyIncomplete')) === 'true';
+    const onlyIncomplete = window.__jcmkecSessionStore.getItem(storageKey(config, 'onlyIncomplete')) === 'true';
 
     const toolbar = document.createElement('div');
     toolbar.id = `mobile-nav-${config.id}`;
@@ -80,8 +80,8 @@
       if (firstUnfinished) firstUnfinished.click();
     });
     toolbar.querySelector('.mobile-course-filter').addEventListener('click', function () {
-      const nextValue = localStorage.getItem(storageKey(config, 'onlyIncomplete')) !== 'true';
-      localStorage.setItem(storageKey(config, 'onlyIncomplete'), String(nextValue));
+      const nextValue = window.__jcmkecSessionStore.getItem(storageKey(config, 'onlyIncomplete')) !== 'true';
+      window.__jcmkecSessionStore.setItem(storageKey(config, 'onlyIncomplete'), String(nextValue));
       applyFilter(config, container);
       createToolbar(config, container);
     });
@@ -91,7 +91,7 @@
   }
 
   function applyFilter(config, container) {
-    const onlyIncomplete = localStorage.getItem(storageKey(config, 'onlyIncomplete')) === 'true';
+    const onlyIncomplete = window.__jcmkecSessionStore.getItem(storageKey(config, 'onlyIncomplete')) === 'true';
     getItems(container, config.selector).forEach(item => {
       item.classList.toggle('mobile-course-filtered', onlyIncomplete && isComplete(item));
     });
@@ -106,18 +106,18 @@
       if (!itemCount) return;
       candidate.dataset.mobileChapterReady = 'true';
       const key = storageKey(config, `chapter-${index}`);
-      const collapsed = localStorage.getItem(key) === 'true';
+      const collapsed = window.__jcmkecSessionStore.getItem(key) === 'true';
       const control = document.createElement('button');
       control.type = 'button';
       control.className = 'mobile-chapter-toggle ml-auto min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-700 hover:bg-slate-100';
       const apply = function () {
-        const isCollapsed = localStorage.getItem(key) === 'true';
+        const isCollapsed = window.__jcmkecSessionStore.getItem(key) === 'true';
         candidate.hidden = isCollapsed;
         control.setAttribute('aria-expanded', String(!isCollapsed));
         control.textContent = isCollapsed ? '展開題目 ⌄' : '收合本章 ⌃';
       };
       control.addEventListener('click', function () {
-        localStorage.setItem(key, String(localStorage.getItem(key) !== 'true'));
+        window.__jcmkecSessionStore.setItem(key, String(window.__jcmkecSessionStore.getItem(key) !== 'true'));
         apply();
       });
       heading.parentElement.classList.add('flex', 'items-center', 'gap-2');

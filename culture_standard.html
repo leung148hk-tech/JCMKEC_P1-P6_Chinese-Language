@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>中華文化與古詩 - 標準常規訓練</title>
@@ -151,7 +152,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let stdExp = parseInt(localStorage.getItem('cultureStandardExp')) || 0;
+        let stdExp = parseInt(window.__jcmkecSessionStore.getItem('cultureStandardExp')) || 0;
         document.getElementById('exp-display').innerText = stdExp;
         
         let currentMode = 'poem'; 
@@ -308,7 +309,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -538,8 +539,8 @@
             ])
         ];
 
-        let poemProgress = JSON.parse(localStorage.getItem('poemStandardProgress')) || new Array(poemData.length).fill(0);
-        let cultureProgress = JSON.parse(localStorage.getItem('cultureStandardProgress')) || new Array(cultureData.length).fill(0);
+        let poemProgress = JSON.parse(window.__jcmkecSessionStore.getItem('poemStandardProgress')) || new Array(poemData.length).fill(0);
+        let cultureProgress = JSON.parse(window.__jcmkecSessionStore.getItem('cultureStandardProgress')) || new Array(cultureData.length).fill(0);
 
         function renderPoemDirectory() {
             const dirContainer = document.getElementById('poem-content');
@@ -568,7 +569,7 @@
         }
 
         function startPoem(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-poem-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-poem-std')) {
                 pendingTaskIdx = idx; pendingTaskType = 'poem'; showTutorial('t-poem-std'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -636,7 +637,7 @@
         }
 
         function startCulture(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-culture-std')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-culture-std')) {
                 pendingTaskIdx = idx; pendingTaskType = 'culture'; showTutorial('t-culture-std'); return;
             }
             currentIdx = idx; currentQIdx = 0; mistakes = 0;
@@ -782,7 +783,7 @@
 
                         if (expGained > 0) {
                             stdExp += expGained;
-                            localStorage.setItem('cultureStandardExp', stdExp);
+                            window.__jcmkecSessionStore.setItem('cultureStandardExp', stdExp);
                             document.getElementById('exp-display').innerText = stdExp;
                             document.getElementById('exp-display').classList.add('pop');
                             setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -790,8 +791,8 @@
                         
                         if (finalStatus === 1 || previousStatus !== 1) {
                             progArr[currentIdx] = finalStatus;
-                            if(type==='poem') localStorage.setItem('poemStandardProgress', JSON.stringify(progArr));
-                            else localStorage.setItem('cultureStandardProgress', JSON.stringify(progArr));
+                            if(type==='poem') window.__jcmkecSessionStore.setItem('poemStandardProgress', JSON.stringify(progArr));
+                            else window.__jcmkecSessionStore.setItem('cultureStandardProgress', JSON.stringify(progArr));
                         }
 
                         let expMsg = expGained > 0 
@@ -819,8 +820,8 @@
                 let progArr = type === 'poem' ? poemProgress : cultureProgress;
                 if (progArr[currentIdx] !== 1 && progArr[currentIdx] !== 2) {
                     progArr[currentIdx] = -1;
-                    if(type==='poem') localStorage.setItem('poemStandardProgress', JSON.stringify(progArr));
-                    else localStorage.setItem('cultureStandardProgress', JSON.stringify(progArr));
+                    if(type==='poem') window.__jcmkecSessionStore.setItem('poemStandardProgress', JSON.stringify(progArr));
+                    else window.__jcmkecSessionStore.setItem('cultureStandardProgress', JSON.stringify(progArr));
                 }
                 
                 const hintBox = document.getElementById('dynamic-hint-box');
@@ -844,7 +845,7 @@
             const pb = document.getElementById('progress-bar');
             if (pb) pb.style.width = percent + '%';
             
-            if(pDone === 10 && cDone === 10) localStorage.setItem('t_culture_2', 'true');
+            if(pDone === 10 && cDone === 10) window.__jcmkecSessionStore.setItem('t_culture_2', 'true');
         }
 
         function backToDirectoryFromFinish() {

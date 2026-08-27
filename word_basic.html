@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>字詞基礎 - 趣味多感官訓練</title>
@@ -228,7 +229,7 @@
 
     <script>
         // ================= 1. 核心系統設定與過濾語音 =================
-        let totalExp = parseInt(localStorage.getItem('userExp')) || 0;
+        let totalExp = parseInt(window.__jcmkecSessionStore.getItem('userExp')) || 0;
         document.getElementById('exp-display').innerText = totalExp;
         let currentQuestionIdx = -1;
         let questWriter;
@@ -357,7 +358,7 @@
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
             
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -671,12 +672,12 @@
             ...tw1Pool, ...tw2Pool, ...s1Pool, ...s2Pool, ...w1Pool, ...w2Pool
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('questProgress')) || new Array(rawQuestData.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('questProgress')) || new Array(rawQuestData.length).fill(0);
         let isSandboxInitialized = false;
-        let chapterOpenState = JSON.parse(localStorage.getItem('wordBasicChapterOpenState') || '{}');
+        let chapterOpenState = JSON.parse(window.__jcmkecSessionStore.getItem('wordBasicChapterOpenState') || '{}');
 
         function getResumeQuestionIdx() {
-            const lastQuestionIdx = Number(localStorage.getItem('wordBasicLastQuestionIdx'));
+            const lastQuestionIdx = Number(window.__jcmkecSessionStore.getItem('wordBasicLastQuestionIdx'));
             if (Number.isInteger(lastQuestionIdx) && lastQuestionIdx >= 0 && lastQuestionIdx < rawQuestData.length && userProgress[lastQuestionIdx] !== 1) {
                 return lastQuestionIdx;
             }
@@ -695,7 +696,7 @@
         }
 
         function saveChapterState() {
-            localStorage.setItem('wordBasicChapterOpenState', JSON.stringify(chapterOpenState));
+            window.__jcmkecSessionStore.setItem('wordBasicChapterOpenState', JSON.stringify(chapterOpenState));
         }
 
         function toggleChapter(catId) {
@@ -796,14 +797,14 @@
             if (catId.startsWith('s-')) tutKey = 's-stroke';
             if (catId.startsWith('w-')) tutKey = 'w-write';
 
-            if (!forceStart && !localStorage.getItem('tut_seen_' + tutKey)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + tutKey)) {
                 pendingQuestionIdx = idx;
                 showTutorial(catId);
                 return;
             }
 
             currentQuestionIdx = idx;
-            localStorage.setItem('wordBasicLastQuestionIdx', String(idx));
+            window.__jcmkecSessionStore.setItem('wordBasicLastQuestionIdx', String(idx));
             document.getElementById('quest-directory').style.display = 'none';
             
             const questPlay = document.getElementById('quest-play');
@@ -947,7 +948,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 speakText("不對喔，再想想看！");
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('questProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('questProgress', JSON.stringify(userProgress));
                 
                 setTimeout(() => {
                     btnElement.classList.remove('wrong', 'shake');
@@ -965,14 +966,14 @@
             
             if (userProgress[currentQuestionIdx] !== 1) {
                 totalExp += 10;
-                localStorage.setItem('userExp', totalExp);
+                window.__jcmkecSessionStore.setItem('userExp', totalExp);
                 document.getElementById('exp-display').innerText = totalExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
             }
             
             userProgress[currentQuestionIdx] = 1; 
-            localStorage.setItem('questProgress', JSON.stringify(userProgress));
+            window.__jcmkecSessionStore.setItem('questProgress', JSON.stringify(userProgress));
 
             if (qData[0] === 'c' || qData[0] === 'tw') {
                 setTimeout(() => {
@@ -1135,7 +1136,7 @@
                     speakText("寫得好！");
                     
                     totalExp += 2;
-                    localStorage.setItem('userExp', totalExp);
+                    window.__jcmkecSessionStore.setItem('userExp', totalExp);
                     document.getElementById('exp-display').innerText = totalExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);

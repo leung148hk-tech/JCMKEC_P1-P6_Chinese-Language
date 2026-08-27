@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聆聽與說話 - 拔尖進階特訓</title>
@@ -127,7 +128,7 @@
 
     <script>
         // ================= 1. 核心狀態與語音 =================
-        let advExp = parseInt(localStorage.getItem('listenAdvExp')) || 0;
+        let advExp = parseInt(window.__jcmkecSessionStore.getItem('listenAdvExp')) || 0;
         document.getElementById('exp-display').innerText = advExp;
         
         let currentMode = 'listen'; 
@@ -221,7 +222,7 @@
             const modal = document.getElementById('tutorial-modal');
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('tutorial-content').classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + tutKey, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + tutKey, 'true');
         }
 
         function closeTutorial() {
@@ -419,7 +420,7 @@
             }
         ];
 
-        let listenProgress = JSON.parse(localStorage.getItem('listenAdvProgress')) || new Array(listenData.length).fill(0);
+        let listenProgress = JSON.parse(window.__jcmkecSessionStore.getItem('listenAdvProgress')) || new Array(listenData.length).fill(0);
 
         function renderListenDirectory() {
             const dirContainer = document.getElementById('listen-content');
@@ -449,7 +450,7 @@
         }
 
         function startListen(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-adv-listen')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-adv-listen')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'listen';
                 showTutorial('t-adv-listen');
@@ -541,10 +542,10 @@
                     } else {
                         if (listenProgress[currentStoryIdx] !== 1) {
                             advExp += 50; // 拔尖版長篇給 50 經驗
-                            localStorage.setItem('listenAdvExp', advExp);
+                            window.__jcmkecSessionStore.setItem('listenAdvExp', advExp);
                             document.getElementById('exp-display').innerText = advExp;
                             listenProgress[currentStoryIdx] = 1;
-                            localStorage.setItem('listenAdvProgress', JSON.stringify(listenProgress));
+                            window.__jcmkecSessionStore.setItem('listenAdvProgress', JSON.stringify(listenProgress));
                         }
                         
                         document.getElementById('feedback-desc').innerText = "你成功完成了 8 道最高難度的深層推論題！獲得 50 EXP！";
@@ -591,7 +592,7 @@
             { e: '🐸🦅🌍', t: '井底之蛙的廣闊世界', base: '一隻老鷹飛過井口，看見井底之蛙。老鷹決定用爪子把青蛙抓出水井，帶牠看看世界。', task: '青蛙第一次離開水井，牠看到了什麼令人震撼的景象？牠有什麼感悟？', sample: '大家好。老鷹帶著青蛙飛上高空。青蛙嚇得睜開眼睛，看見了連綿的群山、浩瀚的海洋和無邊無際的藍天。牠驚嘆道：「原來天空不是圓的，世界大得超乎想像！」牠為自己以前的自大感到羞愧。這告訴我們：「人的認知是受環境局限的。我們必須保持謙虛，勇於跳出舒適圈，才能看到真正的世界。」' }
         ];
 
-        let speakProgress = JSON.parse(localStorage.getItem('speakAdvProgress')) || new Array(speakData.length).fill(0);
+        let speakProgress = JSON.parse(window.__jcmkecSessionStore.getItem('speakAdvProgress')) || new Array(speakData.length).fill(0);
 
         function renderSpeakDirectory() {
             const dirContainer = document.getElementById('speak-content');
@@ -614,7 +615,7 @@
         }
 
         function startSpeak(idx, forceStart = false) {
-            if (!forceStart && !localStorage.getItem('tut_seen_t-adv-speak')) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_t-adv-speak')) {
                 pendingTaskIdx = idx;
                 pendingTaskType = 'speak';
                 showTutorial('t-adv-speak');
@@ -676,17 +677,17 @@
             stopStoryTTS();
             if (speakProgress[currentStoryIdx] !== 1) {
                 advExp += 20;
-                localStorage.setItem('listenAdvExp', advExp);
+                window.__jcmkecSessionStore.setItem('listenAdvExp', advExp);
                 document.getElementById('exp-display').innerText = advExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
                 
                 speakProgress[currentStoryIdx] = 1;
-                localStorage.setItem('speakAdvProgress', JSON.stringify(speakProgress));
+                window.__jcmkecSessionStore.setItem('speakAdvProgress', JSON.stringify(speakProgress));
                 showToast("高階口語延展完成！+20 EXP");
                 
                 if (listenProgress.filter(p=>p===1).length === listenData.length && speakProgress.filter(p=>p===1).length === speakData.length) {
-                    localStorage.setItem('t_listen_3', 'true');
+                    window.__jcmkecSessionStore.setItem('t_listen_3', 'true');
                 }
             }
             switchMode('speak');

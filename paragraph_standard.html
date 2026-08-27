@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>段落與實用文 - 標準常規訓練</title>
@@ -194,7 +195,7 @@
 
     <script>
         // ================= 1. 核心狀態、分類與大腦字典 =================
-        let paraExp = parseInt(localStorage.getItem('rhetStdExp')) || 0;
+        let paraExp = parseInt(window.__jcmkecSessionStore.getItem('rhetStdExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -304,7 +305,7 @@
             document.getElementById('tutorial-body').innerHTML = tutorialContents[categoryId];
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         }
 
         function closeTutorial() {
@@ -420,7 +421,7 @@
             ...formatPracticalReorderData(practicalReorderStdPool, 'p-practical-reorder', '全文格式重組：把實用文段落拼砌成符合格式的完整文章。')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('rhetStdProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('rhetStdProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         // ================= 4. 實用文格式沙盒底層邏輯與資料 =================
         const sandboxBricks = {
@@ -495,7 +496,7 @@
         let sandboxSelectedBrick = null;
         
         // 🌟 核心升級：實用文過關打卡紀錄
-        let sandboxCompleted = JSON.parse(localStorage.getItem('sandboxCompleted')) || [];
+        let sandboxCompleted = JSON.parse(window.__jcmkecSessionStore.getItem('sandboxCompleted')) || [];
 
         // 動態生成左側模板按鈕，加入過關「✅」剔號
         function renderSandboxTemplates() {
@@ -673,10 +674,10 @@
                 if (!isAlreadyCompleted) {
                     // 🌟 首次過關才加分，防止重覆刷分
                     sandboxCompleted.push(currentActiveTemplate);
-                    localStorage.setItem('sandboxCompleted', JSON.stringify(sandboxCompleted));
+                    window.__jcmkecSessionStore.setItem('sandboxCompleted', JSON.stringify(sandboxCompleted));
                     
                     paraExp += 20;
-                    localStorage.setItem('rhetStdExp', paraExp);
+                    window.__jcmkecSessionStore.setItem('rhetStdExp', paraExp);
                     document.getElementById('exp-display').innerText = paraExp;
                     document.getElementById('exp-display').classList.add('pop');
                     setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -685,7 +686,7 @@
 
                     // 🌟 與首頁連動：當4個範本全部挑戰成功
                     if (sandboxCompleted.length === 4) {
-                        localStorage.setItem('t_para_2', 'true'); // index.html 的標準版打卡改為過關！
+                        window.__jcmkecSessionStore.setItem('t_para_2', 'true'); // index.html 的標準版打卡改為過關！
                         showToast("恭喜你完成全部實用文範本，首頁已為你打卡過關！");
                         speakText("太厲害了！你已完成所有實用文範本！");
                     }
@@ -794,7 +795,7 @@
             else if (qType.includes('note')) tutId = 'p-practical-note';
             else tutId = 'p-practical-notice';
 
-            if (!forceStart && !localStorage.getItem('tut_seen_' + tutId)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + tutId)) {
                 pendingQuestionIdx = idx; 
                 showTutorial(tutId);      
                 return;                   
@@ -969,7 +970,7 @@
             } else if (reorderTarget.length === reorderCorrect.length) {
                 currentQuestionMistakes++;
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('rhetStdProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetStdProgress', JSON.stringify(userProgress));
                 
                 let chunksToReturn = reorderTarget.splice(correctCount);
                 for (let chunk of chunksToReturn) {
@@ -1018,7 +1019,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('rhetStdProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetStdProgress', JSON.stringify(userProgress));
                 
                 let lines = qData.explanation.split('<br>');
                 let matchedLine = lines.find(l => l.includes(clickedOptText));
@@ -1055,7 +1056,7 @@
 
             if (expGained > 0) {
                 paraExp += expGained;
-                localStorage.setItem('rhetStdExp', paraExp);
+                window.__jcmkecSessionStore.setItem('rhetStdExp', paraExp);
                 document.getElementById('exp-display').innerText = paraExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -1063,7 +1064,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentQuestionIdx] = finalStatus;
-                localStorage.setItem('rhetStdProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetStdProgress', JSON.stringify(userProgress));
             }
 
             let modalIcon = finalStatus === 1 ? '🌟' : '✅';

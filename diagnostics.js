@@ -10,7 +10,7 @@
 
   function readEntries() {
     try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const stored = JSON.parse(window.__jcmkecSessionStore.getItem(STORAGE_KEY) || '[]');
       return Array.isArray(stored) ? stored : [];
     } catch (_) {
       return [];
@@ -21,7 +21,7 @@
     try {
       const entries = readEntries();
       entries.push(entry);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(-LIMIT)));
+      window.__jcmkecSessionStore.setItem(STORAGE_KEY, JSON.stringify(entries.slice(-LIMIT)));
     } catch (_) {
       // 本機儲存空間不可用時，不應阻礙學生的學習流程。
     }
@@ -61,7 +61,7 @@
       };
     },
     clear: function () {
-      try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+      try { window.__jcmkecSessionStore.removeItem(STORAGE_KEY); } catch (_) {}
       return true;
     }
   });

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
+    <script src="no-progress-storage.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>修辭與標點 - 拔尖擴充挑戰</title>
@@ -124,7 +125,7 @@
 
     <script>
         // ================= 1. 核心狀態與輔助函式 =================
-        let advExp = parseInt(localStorage.getItem('rhetAdvExp')) || 0;
+        let advExp = parseInt(window.__jcmkecSessionStore.getItem('rhetAdvExp')) || 0;
         let currentQuestionMistakes = 0; 
         let pendingQuestionIdx = -1;
         let currentQuestionIdx = -1;
@@ -363,7 +364,7 @@
             
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-90'); }, 10);
-            localStorage.setItem('tut_seen_' + categoryId, 'true');
+            window.__jcmkecSessionStore.setItem('tut_seen_' + categoryId, 'true');
         };
 
         window.closeTutorial = function() {
@@ -720,7 +721,7 @@
             ...window.formatReorderData(complexReorderPool, 'r-rhet-complex-reorder', '終極實戰：結合關聯詞，重組修辭複句')
         ];
 
-        let userProgress = JSON.parse(localStorage.getItem('rhetAdvProgress')) || new Array(rawQuestDataObj.length).fill(0);
+        let userProgress = JSON.parse(window.__jcmkecSessionStore.getItem('rhetAdvProgress')) || new Array(rawQuestDataObj.length).fill(0);
 
         window.renderDirectory = function() {
             const dirContainer = document.getElementById('directory-content');
@@ -789,7 +790,7 @@
             const qType = qData.category;
             let tutKey = qType === 'r-rhet-complex-reorder' ? 'r-rhet-reorder' : qType;
             
-            if (!forceStart && !localStorage.getItem('tut_seen_' + tutKey)) {
+            if (!forceStart && !window.__jcmkecSessionStore.getItem('tut_seen_' + tutKey)) {
                 pendingQuestionIdx = idx; 
                 window.showTutorial(tutKey);      
                 return;                   
@@ -996,7 +997,7 @@
                 window.speakText("順序有誤，請看提示再試一次！");
                 currentQuestionMistakes++;
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('rhetAdvProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetAdvProgress', JSON.stringify(userProgress));
                 
                 for (let i = 0; i < correctCount; i++) {
                     lockedSlots[i] = true;
@@ -1045,7 +1046,7 @@
                 btnElement.classList.add('wrong', 'shake');
                 currentQuestionMistakes++; 
                 userProgress[currentQuestionIdx] = -1;
-                localStorage.setItem('rhetAdvProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetAdvProgress', JSON.stringify(userProgress));
                 
                 let lines = qData.explanation.split('<br>');
                 let matchedLine = lines.find(l => l.includes(clickedOptText));
@@ -1088,7 +1089,7 @@
 
             if (expGained > 0) {
                 advExp += expGained;
-                localStorage.setItem('rhetAdvExp', advExp);
+                window.__jcmkecSessionStore.setItem('rhetAdvExp', advExp);
                 document.getElementById('exp-display').innerText = advExp;
                 document.getElementById('exp-display').classList.add('pop');
                 setTimeout(() => document.getElementById('exp-display').classList.remove('pop'), 400);
@@ -1096,7 +1097,7 @@
 
             if (finalStatus === 1 || previousStatus !== 1) {
                 userProgress[currentQuestionIdx] = finalStatus;
-                localStorage.setItem('rhetAdvProgress', JSON.stringify(userProgress));
+                window.__jcmkecSessionStore.setItem('rhetAdvProgress', JSON.stringify(userProgress));
             }
 
             let modalIcon = finalStatus === 1 ? '🌟' : '✅';
